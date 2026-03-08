@@ -24,12 +24,34 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["ingestion"])
 
 
+# Directory for persisting uploaded files (per program) for context
+UPLOADS_DIR = Path(__file__).resolve().parent.parent / "uploads"
+
+
+def _persist_uploaded_files(program_id: str, paths: list[Path]) -> None:
+    """Save uploaded files to uploads/<program_id>/ so they are kept for context."""
+    if not program_id or not paths:
+        return
+    dest_dir = UPLOADS_DIR / program_id
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for p in paths:
+        if not p.exists():
+            continue
+        dest = dest_dir / p.name
+        try:
+            dest.write_bytes(p.read_bytes())
+            logger.info("Persisted upload: %s -> %s", p.name, dest)
+        except Exception as e:
+            logger.warning("Failed to persist %s: %s", p.name, e)
+
+
 @router.post("/upload-and-parse", response_model=IngestionResponse)
 async def upload_and_parse(
     files: list[UploadFile] = File(...),
 ) -> IngestionResponse:
     """
     Accept uploaded files, run the ingestion pipeline, return IngestionResponse.
+    Files are saved to uploads/<program_id>/ for context (Experiment Design / Execution layers).
     Supported: resistance assay CSV, compound screen CSV, VCF, PDF, TXT/MD.
     """
     if not files:
@@ -46,7 +68,9 @@ async def upload_and_parse(
             paths.append(path)
         if not paths:
             raise HTTPException(status_code=400, detail="No valid files to process")
-        return run_ingestion(paths)
+        response = run_ingestion(paths)
+        _persist_uploaded_files(response.program_state.program_id, paths)
+        return response
     finally:
         for p in paths:
             try:
