@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, Check, ArrowRight, Loader2, Beaker, Rocket } from "lucide-react";
 import { useIngestion } from "@/contexts/IngestionContext";
-import { MOCK_INGESTION_RESPONSE } from "@/lib/mockIngestionResponse";
 import { fetchDemoIngestion, uploadAndParse } from "@/lib/ingestionApi";
 import type { ProgramState, UploadedFileDescriptor } from "@/types/ingestion";
 
@@ -46,10 +45,6 @@ export default function Ingestion() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load demo");
     }
-  }, [runPipeline]);
-
-  const loadDemoMock = useCallback(async () => {
-    await runPipeline(MOCK_INGESTION_RESPONSE);
   }, [runPipeline]);
 
   const handleFileSelect = useCallback(
@@ -146,10 +141,7 @@ export default function Ingestion() {
               </Button>
             </label>
             <Button variant="outline" size="sm" className="text-xs" onClick={loadDemoFromApi} disabled={loading}>
-              Load demo (API)
-            </Button>
-            <Button variant="ghost" size="sm" className="text-xs" onClick={loadDemoMock} disabled={loading}>
-              Load demo (mock)
+              Load demo
             </Button>
           </div>
         </CardContent>
