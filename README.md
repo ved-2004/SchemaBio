@@ -1,190 +1,145 @@
-# AIDEN — AI Drug Program Navigator
-### Autonomous Investigator for Data-to-Experiment Navigation
+# SchemaBio
 
-> **Bio × AI Hackathon 2026 · Built for Cursor**
+**AI-driven scientific workflow platform for antibiotic resistance drug discovery and translational execution.**
 
----
-
-## What AIDEN Does
-
-AIDEN is an AI principal investigator that takes **any evidence you have today**
-and tells you **exactly what to do next** to move your drug program forward.
-
-It is not a chatbot. It is not a database. It is a **decision orchestration layer**.
-
-```
-Upload whatever you have → AIDEN detects stage → Audits assumptions →
-Pulls literature → Detects contradictions → Maps knowledge gaps →
-Generates ranked evidence-linked actions → Shows manufacturing feasibility
-```
-
-The drug is the anchor object. The AI reasons around it.
+SchemaBio turns fragmented data—resistance assays, compound screens, variants, and target rationales—into a single source of truth, then hands off to experiment design and execution planning. Not a chatbot: a **structured scientific operating system**.
 
 ---
 
-## The Five Pillars
+## Why SchemaBio
 
-```
-1. INGEST         Any file type: VCF, resistance CSV, compound screen CSV, PDF, notes
-2. CLASSIFY       Detects program stage (T1 Target ID → T8 CDMO Evaluation)  
-3. AUDIT          Catches methodological errors BEFORE action plan
-4. REASON         Evidence-linked ranked next actions (experiment → regulatory → manufacturing)
-5. TRANSLATE      GMP readiness, CDMO suitability, funding paths, CRO recommendations
-```
+Antibiotic resistance programs live in spreadsheets, VCFs, and PDFs. Decisions get made in silos. SchemaBio:
 
----
+- **Ingests** whatever you have (CSV, VCF, PDF, notes) and parses it **deterministically**—no hallucination, no black box.
+- **Normalizes** everything into evidence-linked entities and signals: organisms, targets, compounds, variants, assay types, resistance fold-shifts, compound hits.
+- **Estimates** where your program sits in the pipeline (hit discovery → resistance characterization → validation → preclinical → manufacturing).
+- **Flags** what’s missing (controls, replicates, ADMET, target engagement) so the next layers know what to recommend.
+- **Hands off** clean contracts to Experiment Design (next experiments, controls, prioritization) and Execution (partners, funding, GMP readiness)—so you can build or plug in AI there without re-parsing the world.
 
-## Tech Stack
-
-### Backend
-- **FastAPI** — SSE streaming API, file upload endpoints
-- **Anthropic Claude Sonnet 4** — stage classification, contradiction detection, action generation
-- **cyvcf2 + pandas + PyMuPDF** — deterministic parsers (LLM never sees raw files)
-- **PubMed E-utilities** — live literature retrieval with demo cache fallback
-- **ChEMBL REST API** — scaffold artifact detection, ADMET flags
-- **Semantic Scholar** — citation count queries for epistemic gap map
-
-### Frontend
-- **React 18 + Vite** — SSE consumer with live streaming UI
-- **Recharts** — volcano plot, gap visualization, evidence completeness
-- **Tailwind CSS** — styling
-
-### Integration (Biomni-compatible)
-- **cyvcf2** — VCF parsing (Biomni tool: pysam compatible)
-- **biopython** — sequence utilities
-- **rdkit** — SMILES validation, Lipinski calculation
-- **openbabel** — structure format conversion
-- **pymed** — PubMed query wrapper
+**The ingestion layer is the source of truth.** Everything downstream consumes its JSON.
 
 ---
 
-## Full Repository Structure
+## Architecture
 
 ```
-aiden/
-├── README.md
-├── CURSOR_GUIDE.md              ← Start here when opening in Cursor
-├── .env.example
-├── backend/
-│   ├── main.py                  ← FastAPI app, all endpoints
-│   ├── requirements.txt
-│   ├── models/
-│   │   ├── drug_program.py      ← THE anchor object (DrugProgram)
-│   │   └── context_bundle.py   ← File parse results
-│   ├── parsers/
-│   │   ├── universal_parser.py  ← Detects file type, routes to correct parser
-│   │   ├── vcf_parser.py        ← cyvcf2 VCF → ParsedVariant[]
-│   │   ├── csv_parser.py        ← pandas schema inference → ParsedCompound[]
-│   │   ├── resistance_parser.py ← MIC/resistance CSV → ResistanceProfile
-│   │   └── pdf_parser.py        ← PyMuPDF → ParsedPDF
-│   ├── agents/
-│   │   ├── orchestrator.py      ← 9-stage pipeline FSM, SSE streaming
-│   │   ├── stage_classifier.py  ← T1–T8 taxonomy, heuristic + LLM
-│   │   ├── assumption_auditor.py← 6 heuristic checks + LLM context pass
-│   │   ├── literature_agent.py  ← PubMed retrieval + claim extraction
-│   │   ├── contradiction_detector.py ← IC50/MIC vs literature cross-ref
-│   │   ├── epistemic_gap_mapper.py   ← Knowledge frontier mapping
-│   │   ├── translational_agent.py    ← GMP/CDMO/regulatory analysis
-│   │   └── action_generator.py      ← Ranked evidence-linked actions
-│   └── tools/
-│       ├── pubmed_tool.py       ← E-utilities queries + cache
-│       ├── chembl_tool.py       ← Scaffold/ADMET queries
-│       └── semantic_scholar.py  ← Citation count queries
-├── frontend/
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── index.html
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx              ← Root, routing
-│       ├── hooks/
-│       │   └── useAIDENStream.js← SSE consumer hook
-│       ├── lib/
-│       │   └── demo_data.js     ← Frontend demo data (no backend needed)
-│       └── components/
-│           ├── FileIngestion.jsx      ← Upload zones for all file types
-│           ├── DrugProgramCard.jsx    ← The anchor object display
-│           ├── PhaseProgress.jsx      ← 9-step pipeline trace
-│           ├── StageBadge.jsx         ← T1–T8 with confidence
-│           ├── AssumptionAuditor.jsx  ← Severity-tagged flags
-│           ├── ContradictionPanel.jsx ← IC50/MIC side-by-side comparison
-│           ├── EpistemicGapMap.jsx    ← Knowledge frontier visualization
-│           ├── ActionPlan.jsx         ← Ranked actions with evidence chips
-│           ├── TranslationalPanel.jsx ← GMP/CDMO/funding guidance
-│           ├── VolcanoPlot.jsx        ← Compound scatter with labels
-│           ├── LiteraturePanel.jsx    ← Paper cards with claim highlights
-│           └── CitationDrawer.jsx     ← Slide-in detail panel
-├── data/
-│   └── demo/
-│       ├── gyrase_resistance.csv      ← Antibiotic demo: MIC across strains
-│       ├── compound14_screen.csv      ← Compound screen results
-│       ├── gyra_variants.vcf          ← gyrA D87N + other mutations
-│       └── cached_literature.json     ← Pre-fetched literature
-├── tests/
-│   ├── test_parsers.py
-│   ├── test_agents.py
-│   └── test_demo_flow.py
-├── docs/
-│   ├── STAGE_TAXONOMY.md             ← Full T1–T8 stage descriptions
-│   ├── BIOMNI_INTEGRATION.md         ← How to wire Biomni tools
-│   └── DEMO_SCRIPT.md               ← 90-second demo beats
-└── scripts/
-    ├── run_demo.py                   ← Run full pipeline on demo data
-    └── test_api.sh                   ← curl commands for all endpoints
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 1 — Ingestion (implemented)                                │
+│  CSV · VCF · PDF · Text  →  ProgramState + ExperimentDesignInput │
+│  + ExecutionPlanningInput (deterministic parsing, zero LLM)       │
+└────────────────────────────┬────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────────┐
+│  LAYER 2 — Experiment Design (to build)                           │
+│  Consumes experiment_design_input → ranked experiments, controls, │
+│  hypothesis prioritization, literature-backed reasoning           │
+└────────────────────────────┬────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────────┐
+│  LAYER 3 — Execution / Translational Planning (to build)         │
+│  Consumes execution_planning_input → CRO/CDMO recommendations,    │
+│  funding paths, evidence package gaps, GMP readiness               │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Quickstart
+## What’s in the box
+
+- **Ingestion API** — `POST /api/upload-and-parse` (real files), `GET /api/demo-ingestion` (mocked antibiotic resistance demo). Returns a single JSON: `program_state`, `experiment_design_input`, `execution_planning_input`.
+- **Parsers** — Resistance assay CSV, compound screen CSV, VCF, PDF/notes. Schema detection, entity and signal extraction, missing-data flags, evidence index.
+- **Stage estimation** — Deterministic rules: hit_discovery, resistance_mechanism_characterization, experimental_validation_planning, preclinical_package_gap_analysis, manufacturing_feasibility_review. Confidence + reasoning_basis.
+- **Frontend** — React 18, Vite, TypeScript, shadcn/Tailwind. Ingestion page (upload + demo), Program Dashboard driven by ingestion response, Experiments / Execution / Literature / Reports shells ready for the next two layers.
+- **Handoff docs** — For Claude or any builder: ingestion summary, experiment-design input schema and suggested outputs, execution-planning input schema and suggested outputs, paste-ready “next steps” context. See `/docs` and `/docs/examples`.
+
+---
+
+## Quick start
 
 ```bash
-# Backend
+# Backend (from repo root)
 cd backend
-cp ../.env.example ../.env
-# Fill in ANTHROPIC_API_KEY
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
+# API at http://localhost:8000  ·  Docs at http://localhost:8000/docs
 
-# Frontend
+# Frontend (new terminal)
 cd frontend
 npm install
 npm run dev
-# Opens at http://localhost:5173
+# App at http://localhost:5173
+```
+
+**Try it:** Open the app → **Ingestion** → “Load demo (API)” or upload your own CSV/VCF/PDF. Then open **Program Dashboard** to see program state, stage, entities, signals, and handoff previews.
+
+---
+
+## API (ingestion layer)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| **GET** | `/api/demo-ingestion` | Full mocked antibiotic resistance `IngestionResponse` |
+| **POST** | `/api/upload-and-parse` | Upload files → run ingestion → return `IngestionResponse` |
+| **POST** | `/api/program-state` | Optional: return `ProgramState` from test input or demo |
+| **GET** | `/api/health` | Health check |
+
+Request/response contracts and example JSONs: see `docs/ingestion-layer-summary.md` and `docs/examples/`.
+
+---
+
+## Repo structure
+
+```
+SchemaBio/
+├── README.md
+├── CURSOR_GUIDE.md
+├── backend/
+│   ├── main.py                 # FastAPI app + ingestion router
+│   ├── models/
+│   │   ├── ingestion.py        # Pydantic: IngestionResponse, ProgramState, etc.
+│   │   └── drug_program.py    # Legacy DrugProgram (AIDEN)
+│   ├── routers/
+│   │   └── ingestion.py        # /api/upload-and-parse, /api/demo-ingestion
+│   ├── services/
+│   │   ├── ingestion_service.py   # Orchestration
+│   │   ├── stage_estimator.py     # Deterministic stage rules
+│   │   └── parser_adapter.py      # Parsers → entities/signals
+│   ├── parsers/                # VCF, assay, compound, PDF, universal
+│   ├── data/
+│   │   └── demo_ingestion.py   # Mock IngestionResponse
+│   └── agents/                 # Legacy AIDEN pipeline (optional)
+├── frontend/                   # React + Vite + TypeScript + shadcn
+│   └── src/
+│       ├── pages/              # Ingestion, Dashboard, Experiments, Execution, …
+│       ├── contexts/IngestionContext.tsx
+│       ├── types/ingestion.ts
+│       └── lib/ingestionApi.ts
+├── docs/
+│   ├── ingestion-layer-summary.md
+│   ├── experiment-design-layer-handoff.md
+│   ├── execution-planning-layer-handoff.md
+│   ├── claude-paste-ready-next-steps.md
+│   └── examples/              # example_ingestion_response.json, etc.
+├── data/demo/                  # Sample CSVs, VCF for testing
+└── tests/
 ```
 
 ---
 
-## Environment Variables
+## Tech stack
 
-```bash
-ANTHROPIC_API_KEY=sk-ant-...       # Required
-PUBMED_API_KEY=...                 # Optional (higher rate limits)
-SEMANTIC_SCHOLAR_KEY=...           # Optional
-CHEMBL_BASE_URL=https://www.ebi.ac.uk/chembl/api/data
-DEMO_MODE=false                    # true = always use cached data
-```
+- **Backend:** FastAPI, Pydantic, pandas, PyMuPDF, cyvcf2/pysam (VCF). No LLM in ingestion.
+- **Frontend:** React 18, Vite, TypeScript, shadcn/ui, Tailwind, TanStack Query.
+- **Proxy:** Vite dev server proxies `/api` → `http://localhost:8000`.
 
 ---
 
-## API Endpoints
+## One-liner
 
-```
-POST /api/analyze          Upload files, stream SSE pipeline
-GET  /api/demo             Run antibiotic resistance demo, stream SSE
-GET  /api/health           Health check
-GET  /api/program/{id}     Retrieve completed DrugProgram by ID
-POST /api/program/{id}/update  Update program with new data
-```
+> SchemaBio ingests resistance assays, compound screens, VCFs, and PDFs into a single evidence-linked JSON, estimates program stage, and hands off clean inputs to Experiment Design and Execution layers—so the next AI you plug in reasons over structure, not raw files.
 
 ---
 
-## The Decision Layer Framing
+## License
 
-> Drug discovery is not just finding molecules.
-> It is navigating a sequence of scientific, experimental, regulatory,
-> and manufacturing decisions.
->
-> AIDEN is the decision layer.
->
-> Given the data you have today — what should you do next
-> to turn this into a real drug?
+MIT.
