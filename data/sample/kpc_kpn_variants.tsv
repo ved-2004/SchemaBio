@@ -1,0 +1,7 @@
+gene	accession	mechanism	drug_class	contig	position	percent_identity
+blaKPC-2	ARO:3000745	Klebsiella pneumoniae carbapenemase (class A)	Carbapenem	contig_001	245310	100.0
+blaTEM-1	ARO:3000059	TEM beta-lactamase	Beta-lactam	contig_001	312450	99.8
+aac(6')-Ib-cr	ARO:3000819	aminoglycoside acetyltransferase	Aminoglycoside/Fluoroquinolone	plasmid_IncF	8821	98.5
+tet(A)	ARO:3000175	tetracycline efflux pump	Tetracycline	contig_002	102340	100.0
+sul1	ARO:3000410	dihydropteroate synthase variant	Sulfonamide	contig_002	104500	99.2
+qnrB1	ARO:3003042	quinolone resistance protein	Fluoroquinolone	plasmid_IncF	15342	97.8

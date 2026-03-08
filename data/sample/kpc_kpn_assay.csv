@@ -1,0 +1,11 @@
+compound,organism,MIC (µg/mL),method,source
+meropenem,Klebsiella pneumoniae ST258,64,broth microdilution (CLSI M07),clinical isolate KPN-001
+imipenem,Klebsiella pneumoniae ST258,32,broth microdilution (CLSI M07),clinical isolate KPN-001
+ceftazidime,Klebsiella pneumoniae ST258,>128,broth microdilution (CLSI M07),clinical isolate KPN-001
+cefepime,Klebsiella pneumoniae ST258,>128,broth microdilution (CLSI M07),clinical isolate KPN-001
+colistin,Klebsiella pneumoniae ST258,1,broth microdilution (CLSI M07),clinical isolate KPN-001
+tigecycline,Klebsiella pneumoniae ST258,2,broth microdilution (CLSI M07),clinical isolate KPN-001
+ceftazidime-avibactam,Klebsiella pneumoniae ST258,2,broth microdilution (CLSI M07),clinical isolate KPN-001
+aztreonam-avibactam,Klebsiella pneumoniae ST258,1,broth microdilution (CLSI M07),clinical isolate KPN-001
+meropenem,Klebsiella pneumoniae ATCC 25922,0.125,broth microdilution (CLSI M07),QC reference
+ceftazidime,Klebsiella pneumoniae ATCC 25922,0.5,broth microdilution (CLSI M07),QC reference
