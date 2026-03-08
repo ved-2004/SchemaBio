@@ -1,0 +1,10 @@
+strain,compound,mic_ugml,wt_mic,fold_shift,mutation,n_replicates
+E.coli ATCC 25922 (WT),Compound-14,0.125,0.125,1.0,,1
+E.coli strain X (clinical),Compound-14,8.0,0.125,64.0,gyrA D87N,1
+E.coli ATCC 35218,Compound-14,4.0,0.125,32.0,parC S80I,1
+E.coli ATCC 25922 (WT),Compound-31,0.06,0.06,1.0,,1
+E.coli strain X (clinical),Compound-31,8.0,0.06,133.3,gyrA D87N,1
+E.coli ATCC 25922 (WT),Ciprofloxacin,0.03,0.03,1.0,,1
+E.coli strain X (clinical),Ciprofloxacin,32.0,0.03,1066.7,gyrA D87N,1
+E.coli ATCC 25922 (WT),Levofloxacin,0.06,0.06,1.0,,1
+E.coli strain X (clinical),Levofloxacin,16.0,0.06,266.7,gyrA D87N,1

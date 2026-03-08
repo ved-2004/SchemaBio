@@ -1,0 +1,148 @@
+/**
+ * Mock ingestion response for antibiotic resistance demo.
+ * Matches backend contract. Use GET /api/demo-ingestion for live demo from API.
+ */
+import type { IngestionResponse } from "@/types/ingestion";
+
+export const MOCK_INGESTION_RESPONSE: IngestionResponse = {
+  program_state: {
+    program_id: "DEMO01",
+    status: "ok",
+    uploaded_files: [
+      {
+        file_id: "file_gyrase_resistance_1",
+        filename: "gyrase_resistance.csv",
+        detected_type: "Resistance Assay CSV",
+        schema_confidence: 0.96,
+        parse_status: "complete",
+        extracted_fields: ["strain_id", "compound_name", "mic", "fold_shift", "replicate", "assay_type"],
+        warnings: [],
+      },
+      {
+        file_id: "file_compound14_2",
+        filename: "compound14_screen.csv",
+        detected_type: "Compound Screen CSV",
+        schema_confidence: 0.94,
+        parse_status: "complete",
+        extracted_fields: ["compound_name", "ic50", "z_score", "hit_flag", "target"],
+        warnings: [],
+      },
+      {
+        file_id: "file_gyra_variants_3",
+        filename: "gyra_variants.vcf",
+        detected_type: "Genomics / VCF",
+        schema_confidence: 0.91,
+        parse_status: "complete",
+        extracted_fields: ["chrom", "pos", "ref", "alt", "gene", "impact", "clinvar"],
+        warnings: [],
+      },
+      {
+        file_id: "file_target_rationale_4",
+        filename: "target_rationale.pdf",
+        detected_type: "Research Notes / PDF",
+        schema_confidence: 0.72,
+        parse_status: "complete",
+        extracted_fields: ["title", "target references", "organism references", "drug class", "mechanism keywords"],
+        warnings: [],
+      },
+    ],
+    entities: [
+      { type: "organism", value: "E. coli (ATCC 25922 + clinical isolates)", source: "gyrase_resistance.csv", confidence: 0.97 },
+      { type: "target", value: "GyrA", source: "gyra_variants.vcf", confidence: 0.98 },
+      { type: "variant", value: "GyrA D87N", source: "gyra_variants.vcf", confidence: 0.95 },
+      { type: "variant", value: "parC S80I", source: "gyra_variants.vcf", confidence: 0.93 },
+      { type: "compound", value: "Compound-14", source: "compound14_screen.csv", confidence: 0.96 },
+      { type: "assay_type", value: "MIC", source: "gyrase_resistance.csv", confidence: 0.99 },
+    ],
+    signals: [
+      { kind: "resistance_fold_shift", value: 64, unit: "×", source: "gyrase_resistance.csv" },
+      { kind: "compound_hit", value: "Compound-14", source: "compound14_screen.csv" },
+      { kind: "lead_ic50_nm", value: 32, unit: "nM", source: "compound14_screen.csv" },
+      { kind: "top_hit_count", value: 3, source: "compound14_screen.csv" },
+      { kind: "variant_count", value: 3, unit: "variants", source: "gyra_variants.vcf" },
+    ],
+    stage_estimate: {
+      name: "resistance_mechanism_characterization",
+      confidence: 0.93,
+      reasoning_basis: [
+        "Variant data + resistance assay + compound hit data present.",
+        "Mechanism characterization is the natural next step.",
+      ],
+    },
+    missing_data_flags: [
+      "no_vehicle_control_detected",
+      "no_reproducibility_summary_detected",
+      "no_target_engagement_data_detected",
+      "no_admet_data_detected",
+      "no_manufacturability_data_detected",
+    ],
+    warnings: [
+      "No vehicle/DMSO control in compound screen",
+      "Single replicate (n=1) detected",
+    ],
+    evidence_index: {
+      file_gyrase_resistance_1: ["E. coli", "MIC", "64"],
+      file_compound14_2: ["Compound-14", "32", "compound_hit:Compound-14"],
+      file_gyra_variants_3: ["GyrA", "GyrA D87N"],
+      file_target_rationale_4: [],
+    },
+  },
+  experiment_design_input: {
+    stage: "resistance_mechanism_characterization",
+    stage_confidence: 0.93,
+    biological_context: "E. coli GyrA D87N / parC S80I fluoroquinolone resistance; lead Compound-14 (IC50 32 nM).",
+    assay_context: ["MIC", "compound screen", "variant calling"],
+    priority_signals: [
+      { kind: "resistance_fold_shift", value: 64, unit: "×" },
+      { kind: "compound_hit", value: "Compound-14", source: "compound14_screen.csv" },
+    ],
+    missing_experiment_context: [
+      "Efflux vs target mutation mechanism",
+      "MIC across ≥5 strains including WT",
+      "Time-kill kinetics",
+      "Enzyme inhibition (WT vs D87N)",
+    ],
+    evidence_bundle: {
+      literature_refs: ["37104821", "36892011", "32217743", "30110579"],
+      quantitative_claims: [
+        { type: "IC50", value: 890, unit: "nM", target: "GyrA D87N (published quinolone)" },
+        { type: "IC50", value: 32, unit: "nM", target: "Compound-14 (this program)" },
+      ],
+      audit_refs: ["audit_001", "audit_002"],
+      gap_refs: ["gap_001", "gap_002"],
+      file_refs: ["file_gyrase_resistance_1", "file_compound14_2", "file_gyra_variants_3", "file_target_rationale_4"],
+    },
+  },
+  execution_planning_input: {
+    stage: "resistance_mechanism_characterization",
+    stage_confidence: 0.93,
+    program_summary:
+      "Gyrase inhibitor program (Compound-14) vs gyrA D87N E. coli. 64× resistance fold-shift; mechanism unknown. Evidence completeness ~30%; GMP readiness ~20%.",
+    development_signals: [
+      { kind: "synthesis_steps", value: 4, unit: "steps" },
+      { kind: "evidence_completeness_pct", value: 30, unit: "%" },
+      { kind: "gmp_readiness_pct", value: 20, unit: "%" },
+    ],
+    missing_development_inputs: [
+      "no_vehicle_control_detected",
+      "no_reproducibility_summary_detected",
+      "no_target_engagement_data_detected",
+      "no_admet_data_detected",
+      "no_manufacturability_data_detected",
+    ],
+    readiness_constraints: [
+      "CDMO not ready until ADMET + reproducibility package complete",
+      "BARDA CARB-X fit for AMR discovery — up to $2M",
+    ],
+    evidence_bundle: {
+      literature_refs: ["37104821", "36892011"],
+      quantitative_claims: [
+        { type: "IC50", value: 890, unit: "nM", target: "GyrA D87N (published)" },
+        { type: "IC50", value: 32, unit: "nM", target: "Compound-14" },
+      ],
+      audit_refs: [],
+      gap_refs: [],
+      file_refs: ["file_gyrase_resistance_1", "file_compound14_2", "file_gyra_variants_3", "file_target_rationale_4"],
+    },
+  },
+};

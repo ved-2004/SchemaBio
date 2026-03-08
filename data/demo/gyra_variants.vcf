@@ -1,0 +1,13 @@
+##fileformat=VCFv4.2
+##fileDate=20260308
+##source=AIDEN_demo
+##reference=NC_000913.3 E.coli K-12 MG1655
+##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: 'Allele|Annotation|Annotation_Impact|Gene_Name|Gene_ID|Feature_Type|Feature_ID|Transcript_BioType|Rank|HGVS.c|HGVS.p|cDNA.pos|CDS.pos|AA.pos|Distance'">
+##INFO=<ID=CADD_PHRED,Number=1,Type=Float,Description="CADD PHRED score">
+##FILTER=<ID=PASS,Description="All filters passed">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+NC_000913.3	2336899	rs_gyrA_D87N	G	A	500	PASS	ANN=A|missense_variant|MODERATE|gyrA|b2231|transcript|b2231.1|protein_coding|1/1|c.259G>A|p.Asp87Asn|259/2628|259/2628|87/875|;CADD_PHRED=28.4;CLNSIG=Likely_pathogenic
+NC_000913.3	2336911	rs_gyrA_S83L	C	T	480	PASS	ANN=T|missense_variant|MODERATE|gyrA|b2231|transcript|b2231.1|protein_coding|1/1|c.247C>T|p.Ser83Leu|247/2628|247/2628|83/875|;CADD_PHRED=26.1;CLNSIG=Pathogenic
+NC_000913.3	3178010	rs_parC_S80I	G	T	490	PASS	ANN=T|missense_variant|MODERATE|parC|b3023|transcript|b3023.1|protein_coding|1/1|c.239G>T|p.Ser80Ile|239/2166|239/2166|80/721|;CADD_PHRED=22.1;CLNSIG=Likely_pathogenic
+NC_000913.3	484376	rs_marA_gain	T	C	200	PASS	ANN=C|5_prime_utr_variant|MODIFIER|marA|b0525|transcript|b0525.1|protein_coding|1/1|c.-12T>C||;CADD_PHRED=8.2;CLNSIG=Uncertain_significance
+NC_000913.3	484398	rs_marR_loss	A	G	350	PASS	ANN=G|missense_variant|MODERATE|marR|b0526|transcript|b0526.1|protein_coding|1/1|c.128A>G|p.Tyr43Cys|128/447|128/447|43/148|;CADD_PHRED=18.7;CLNSIG=Likely_pathogenic

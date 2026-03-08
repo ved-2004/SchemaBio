@@ -1,0 +1,31 @@
+{
+  "stage": "resistance_mechanism_characterization",
+  "stage_confidence": 0.93,
+  "program_summary": "Program DEMO01. Stage: resistance_mechanism_characterization (confidence 93%). Gyrase inhibitor program (Compound-14) vs gyrA D87N E. coli. 64× resistance fold-shift; mechanism unknown. Evidence completeness ~30%; GMP readiness ~20%.",
+  "development_signals": [
+    {"kind": "synthesis_steps", "value": 4, "unit": "steps"},
+    {"kind": "evidence_completeness_pct", "value": 30, "unit": "%"},
+    {"kind": "gmp_readiness_pct", "value": 20, "unit": "%"}
+  ],
+  "missing_development_inputs": [
+    "no_vehicle_control_detected",
+    "no_reproducibility_summary_detected",
+    "no_target_engagement_data_detected",
+    "no_admet_data_detected",
+    "no_manufacturability_data_detected"
+  ],
+  "readiness_constraints": [
+    "CDMO not ready until ADMET + reproducibility package complete",
+    "BARDA CARB-X fit for AMR discovery — up to $2M"
+  ],
+  "evidence_bundle": {
+    "literature_refs": ["37104821", "36892011"],
+    "quantitative_claims": [
+      {"type": "IC50", "value": 890, "unit": "nM", "target": "GyrA D87N (published)"},
+      {"type": "IC50", "value": 32, "unit": "nM", "target": "Compound-14"}
+    ],
+    "audit_refs": [],
+    "gap_refs": [],
+    "file_refs": ["file_gyrase_resistance_1", "file_compound14_2", "file_gyra_variants_3", "file_target_rationale_4"]
+  }
+}

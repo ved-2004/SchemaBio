@@ -1,0 +1,8 @@
+compound_id,compound_name,target,ic50_nm,mic_ugml,log2fc,neg_log10p,zscore,smiles
+CPD_014,Compound-14,GyrA,32,0.125,2.8,5.2,4.4,C1=CC(=NC=C1)NC(=O)C2=CN=C(C=C2)NC3=CC=C(C=C3)F
+CPD_031,Compound-31,GyrA,8.4,0.06,3.1,5.8,4.9,CC1=CN=C(C=C1)NC(=O)C2=CN=C(C=C2)NC3=CC=C(C=C3)Cl
+CPD_041,Ciprofloxacin_ref,GyrA,11,0.03,3.5,6.2,5.2,OC(=O)c1cn(C2CC2)c2cc(N3CCNCC3)c(F)cc2c1=O
+CPD_007,Compound-7,GyrA,89,0.5,2.1,3.8,3.2,C(=O)Nc1ccc(cc1)C2=CN=C(C=C2)NC3=CC=C(C=C3)
+CPD_023,Compound-23,GyrA,210,1.0,1.4,2.2,2.1,C1=CC(=CC=C1NC(=O)C2=CN=C(C=C2)N)F
+CPD_061,Compound-61,GyrA,450,4.0,0.3,0.9,0.6,c1nc2ccccc2n1CC(=O)Nc3ccccc3
+CPD_052,Compound-52,GyrA,890,8.0,-0.2,0.4,-0.4,CC1=CC=CC=C1NC(=O)C2=CN=C(NC3=CC=C(C=C3)F)C=C2

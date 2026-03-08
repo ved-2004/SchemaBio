@@ -1,0 +1,27 @@
+{
+  "stage": "resistance_mechanism_characterization",
+  "stage_confidence": 0.93,
+  "biological_context": "E. coli GyrA D87N / parC S80I fluoroquinolone resistance; lead Compound-14 (IC50 32 nM).",
+  "assay_context": ["MIC", "compound screen", "variant calling"],
+  "priority_signals": [
+    {"kind": "resistance_fold_shift", "value": 64, "unit": "×", "source": "gyrase_resistance.csv"},
+    {"kind": "compound_hit", "value": "Compound-14", "source": "compound14_screen.csv"},
+    {"kind": "lead_ic50_nm", "value": 32, "unit": "nM", "source": "compound14_screen.csv"}
+  ],
+  "missing_experiment_context": [
+    "Efflux vs target mutation mechanism",
+    "MIC across ≥5 strains including WT",
+    "Time-kill kinetics",
+    "Enzyme inhibition (WT vs D87N)"
+  ],
+  "evidence_bundle": {
+    "literature_refs": ["37104821", "36892011", "32217743", "30110579"],
+    "quantitative_claims": [
+      {"type": "IC50", "value": 890, "unit": "nM", "target": "GyrA D87N (published quinolone)"},
+      {"type": "IC50", "value": 32, "unit": "nM", "target": "Compound-14 (this program)"}
+    ],
+    "audit_refs": ["audit_001", "audit_002"],
+    "gap_refs": ["gap_001", "gap_002"],
+    "file_refs": ["file_gyrase_resistance_1", "file_compound14_2", "file_gyra_variants_3", "file_target_rationale_4"]
+  }
+}
