@@ -7,6 +7,7 @@ import {
   Rocket,
   Settings,
   Dna,
+  Loader2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -23,20 +24,21 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useIngestion } from "@/contexts/IngestionContext";
 
 const mainNav = [
   { title: "Program Dashboard", url: "/dashboard", icon: BarChart3 },
 ];
 
 const workflowNav = [
-  { title: "Ingestion", url: "/ingestion", icon: Import },
-  { title: "Experiment Design", url: "/experiments", icon: Beaker },
-  { title: "Execution Planning", url: "/execution", icon: Rocket },
+  { title: "Ingestion",           url: "/ingestion",   icon: Import,  requiresData: false },
+  { title: "Experiment Design",   url: "/experiments", icon: Beaker,  requiresData: true  },
+  { title: "Execution Planning",  url: "/execution",   icon: Rocket,  requiresData: true  },
 ];
 
 const insightNav = [
   { title: "Literature & Evidence", url: "/literature", icon: BookOpen },
-  { title: "Reports", url: "/reports", icon: FileText },
+  { title: "Reports",               url: "/reports",    icon: FileText },
 ];
 
 const systemNav = [
@@ -47,6 +49,10 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { isPipelineRunning, experimentDesignResponse } = useIngestion();
+
+  // Downstream pages are only unlocked once data is available
+  const dataReady = !!experimentDesignResponse && !isPipelineRunning;
 
   return (
     <Sidebar collapsible="icon">
@@ -92,21 +98,35 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workflow</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {workflowNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="hover:bg-sidebar-accent/80"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {workflowNav.map((item) => {
+                const locked = item.requiresData && !dataReady;
+                const running = item.requiresData && isPipelineRunning;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild disabled={locked}>
+                      {locked ? (
+                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md text-muted-foreground/50 cursor-not-allowed select-none">
+                          {running
+                            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            : <item.icon className="mr-2 h-4 w-4" />
+                          }
+                          {!collapsed && <span>{item.title}</span>}
+                        </div>
+                      ) : (
+                        <NavLink
+                          to={item.url}
+                          end
+                          className="hover:bg-sidebar-accent/80"
+                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        >
+                          <item.icon className="mr-2 h-4 w-4" />
+                          {!collapsed && <span>{item.title}</span>}
+                        </NavLink>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

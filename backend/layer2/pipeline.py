@@ -137,7 +137,7 @@ class ExperimentDesignPipeline:
             )
             tokens   = 4096 if state.iteration == 1 else 2560
             raw      = await self._call_reasoning_llm(user_msg, tokens)
-            output   = self._parse_output(raw)
+            output   = await self._parse_output(raw)
 
             state.prior_outputs.append(output)
 
@@ -231,7 +231,7 @@ class ExperimentDesignPipeline:
     ) -> ExperimentDesignOutput:
         user_msg = _build_user_message(edi, rag_docs, state, resolved_qa)
         raw      = await self._call_reasoning_llm(user_msg, 2560)
-        return self._parse_output(raw)
+        return await self._parse_output(raw)
 
     # ------------------------------------------------------------------
     # LLM calls
@@ -242,16 +242,10 @@ class ExperimentDesignPipeline:
         response = await self.client.messages.create(
             model=self.reasoning_model,
             max_tokens=max_tokens,
-            system=[
-                {
-                    "type":          "text",
-                    "text":          EXPERIMENT_DESIGN_SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},  # prompt caching
-                }
-            ],
+            system=EXPERIMENT_DESIGN_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
         )
-        return response.content[0].text
+        return _extract_text_block(response)
 
     async def _call_formatting_llm(self, raw_opus_output: str) -> str:
         """Haiku fallback: convert malformed Opus output → clean JSON."""
@@ -259,13 +253,7 @@ class ExperimentDesignPipeline:
         response = await self.client.messages.create(
             model=self.formatting_model,
             max_tokens=4096,
-            system=[
-                {
-                    "type":          "text",
-                    "text":          _FORMATTING_SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
+            system=_FORMATTING_SYSTEM_PROMPT,
             messages=[
                 {
                     "role":    "user",
@@ -277,7 +265,7 @@ class ExperimentDesignPipeline:
                 }
             ],
         )
-        return response.content[0].text
+        return _extract_text_block(response)
 
     async def _compress_reasoning(self, trace: str) -> str:
         if len(trace) < 600:
@@ -286,13 +274,7 @@ class ExperimentDesignPipeline:
         response = await self.client.messages.create(
             model=self.compression_model,
             max_tokens=400,
-            system=[
-                {
-                    "type":          "text",
-                    "text":          _COMPRESSION_SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
+            system=_COMPRESSION_SYSTEM_PROMPT,
             messages=[
                 {
                     "role":    "user",
@@ -300,20 +282,18 @@ class ExperimentDesignPipeline:
                 }
             ],
         )
-        return response.content[0].text
+        return _extract_text_block(response)
 
     # ------------------------------------------------------------------
     # Parsing
     # ------------------------------------------------------------------
 
-    def _parse_output(self, raw: str) -> ExperimentDesignOutput:
+    async def _parse_output(self, raw: str) -> ExperimentDesignOutput:
         json_str = _extract_json(raw)
         if not json_str:
             log.warning("No JSON found in Opus output — running Haiku fallback")
             try:
-                json_str = asyncio.get_event_loop().run_until_complete(
-                    self._call_formatting_llm(raw)
-                )
+                json_str = await self._call_formatting_llm(raw)
             except Exception as exc:
                 log.error(f"Haiku fallback failed: {exc}")
                 return _error_output(str(exc))
@@ -337,6 +317,28 @@ class ExperimentDesignPipeline:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _extract_text_block(response) -> str:
+    """
+    Extract the first text block from an Anthropic response.
+
+    Claude 4 models (Opus 4.6) may return extended thinking blocks before
+    the text block, so we can't assume content[0] is always a TextBlock.
+    Falls back to an empty string if no text block is found, which triggers
+    the Haiku formatting fallback in _parse_output.
+    """
+    if not response.content:
+        log.warning(
+            f"Empty content list from API. stop_reason={getattr(response, 'stop_reason', 'unknown')}"
+        )
+        return ""
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            return block.text
+    # No text block found (e.g. only thinking blocks) — return empty string
+    log.warning(f"No text block in response content: {[b.type for b in response.content]}")
+    return ""
+
 
 async def _compress_prior(pipeline: ExperimentDesignPipeline, trace: str) -> str:
     return await pipeline._compress_reasoning(trace)

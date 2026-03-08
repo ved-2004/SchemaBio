@@ -36,8 +36,10 @@ type IngestionContextValue = {
   executionPlanningResponse: ExecutionPlanningResponse | null;
   isLoadingLayer3:           boolean;
   layer3Error:               string | null;
-  // Setter — triggers the full sequential pipeline
-  setIngestionResponse: (data: IngestionResponse | null) => void;
+  // True while any downstream layer is still running
+  isPipelineRunning:         boolean;
+  // Setter — triggers the full sequential pipeline; returns a Promise
+  setIngestionResponse: (data: IngestionResponse | null) => Promise<void>;
 };
 
 const IngestionContext = createContext<IngestionContextValue | null>(null);
@@ -51,12 +53,15 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
   const [layer2Error,               setLayer2Error]    = useState<string | null>(null);
   const [layer3Error,               setLayer3Error]    = useState<string | null>(null);
 
+  const isPipelineRunning = isLoadingLayer2 || isLoadingLayer3;
+
   /**
    * Main entry point. Called by Ingestion.tsx after a successful upload or demo load.
    * Stores the Layer 1 result, then sequentially triggers Layers 2 and 3.
+   * Returns a Promise that resolves only after all three layers complete.
    */
   const setIngestionResponse = useCallback(
-    async (data: IngestionResponse | null) => {
+    async (data: IngestionResponse | null): Promise<void> => {
       setRawIngestion(data);
       setLayer2Result(null);
       setLayer3Result(null);
@@ -111,6 +116,7 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
         executionPlanningResponse,
         isLoadingLayer3,
         layer3Error,
+        isPipelineRunning,
         setIngestionResponse,
       }}
     >

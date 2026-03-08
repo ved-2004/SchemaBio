@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Check, ArrowRight, Loader2 } from "lucide-react";
+import { Upload, Check, ArrowRight, Loader2, Beaker, Rocket } from "lucide-react";
 import { useIngestion } from "@/contexts/IngestionContext";
 import { MOCK_INGESTION_RESPONSE } from "@/lib/mockIngestionResponse";
 import { fetchDemoIngestion, uploadAndParse } from "@/lib/ingestionApi";
@@ -23,51 +23,99 @@ function getFileExtension(name: string): string {
 }
 
 export default function Ingestion() {
-  const { ingestionResponse, setIngestionResponse } = useIngestion();
+  const { ingestionResponse, setIngestionResponse, isLoadingLayer2, isLoadingLayer3 } = useIngestion();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDemoFromApi = useCallback(async () => {
+  const runPipeline = useCallback(async (data: Parameters<typeof setIngestionResponse>[0]) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchDemoIngestion();
-      setIngestionResponse(data);
+      await setIngestionResponse(data);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load demo";
-      setError(msg);
-      setIngestionResponse(null);
+      setError(e instanceof Error ? e.message : "Pipeline failed");
     } finally {
       setLoading(false);
     }
   }, [setIngestionResponse]);
 
-  const loadDemoMock = useCallback(() => {
-    setIngestionResponse(MOCK_INGESTION_RESPONSE);
-    setError(null);
-  }, [setIngestionResponse]);
+  const loadDemoFromApi = useCallback(async () => {
+    try {
+      const data = await fetchDemoIngestion();
+      await runPipeline(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load demo");
+    }
+  }, [runPipeline]);
+
+  const loadDemoMock = useCallback(async () => {
+    await runPipeline(MOCK_INGESTION_RESPONSE);
+  }, [runPipeline]);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files?.length) return;
-      setLoading(true);
-      setError(null);
       try {
         const data = await uploadAndParse(Array.from(files));
-        setIngestionResponse(data);
+        await runPipeline(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Upload failed");
-      } finally {
-        setLoading(false);
       }
       e.target.value = "";
     },
-    [setIngestionResponse]
+    [runPipeline]
   );
 
   const state: ProgramState | null = ingestionResponse?.program_state ?? null;
-  const hasData = !!state;
+  const hasData = !!state && !loading;
+
+  // ── Pipeline running overlay ──────────────────────────────────────────────
+  if (loading) {
+    const step = isLoadingLayer3
+      ? { label: "Running execution planning (Layer 3)…", icon: Rocket }
+      : isLoadingLayer2
+      ? { label: "Running experiment design (Layer 2)…", icon: Beaker }
+      : { label: "Running ingestion pipeline (Layer 1)…", icon: Loader2 };
+
+    return (
+      <div className="p-6 space-y-6 max-w-5xl">
+        <PageHeader
+          title="Data Ingestion"
+          description="Upload and parse scientific data files. SchemaBio detects schema, extracts entities, and builds program state."
+        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-sm font-medium">{step.label}</p>
+              <p className="text-xs text-muted-foreground">
+                Running all three pipeline layers — this takes 30–90 seconds.
+              </p>
+            </div>
+            <div className="flex items-center gap-6 mt-2">
+              {[
+                { label: "Ingestion", done: true },
+                { label: "Experiment Design", done: isLoadingLayer2 ? false : !isLoadingLayer2 },
+                { label: "Execution Planning", done: !isLoadingLayer3 && !isLoadingLayer2 },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  {loading && !s.done ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5 text-success" />
+                  )}
+                  <span className="text-xs text-muted-foreground">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -94,11 +142,11 @@ export default function Ingestion() {
             <label className="cursor-pointer">
               <input type="file" className="hidden" multiple accept=".csv,.tsv,.vcf,.vcf.gz,.pdf,.txt,.md" onChange={handleFileSelect} disabled={loading} />
               <Button variant="default" size="sm" className="text-xs" asChild>
-                <span>{loading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}Upload & parse</span>
+                <span>Upload & parse</span>
               </Button>
             </label>
             <Button variant="outline" size="sm" className="text-xs" onClick={loadDemoFromApi} disabled={loading}>
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}Load demo (API)
+              Load demo (API)
             </Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={loadDemoMock} disabled={loading}>
               Load demo (mock)
@@ -107,7 +155,7 @@ export default function Ingestion() {
         </CardContent>
       </Card>
 
-      {/* Uploaded files — from program_state.uploaded_files */}
+      {/* Results — only shown after ALL layers complete */}
       {hasData && (
         <>
           <div>
@@ -127,7 +175,7 @@ export default function Ingestion() {
             </div>
           </div>
 
-          {/* Parse preview — entities from program_state */}
+          {/* Parse preview */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -161,7 +209,7 @@ export default function Ingestion() {
             </CardContent>
           </Card>
 
-          {/* Program State summary — program_state signals + stage_estimate + missing_data_flags */}
+          {/* Program State summary */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -221,13 +269,13 @@ export default function Ingestion() {
               )}
               <div className="flex justify-end pt-2">
                 <Button size="sm" className="text-xs" asChild>
-                  <Link to="/dashboard">Continue to Program Dashboard <ArrowRight className="ml-1.5 h-3 w-3" /></Link>
+                  <Link to="/experiments">View Experiment Design <ArrowRight className="ml-1.5 h-3 w-3" /></Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Experiment design & execution inputs — preview */}
+          {/* Downstream inputs preview */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Downstream inputs (for Experiment Design & Execution)</CardTitle>

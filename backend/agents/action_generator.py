@@ -151,7 +151,7 @@ def generate_actions(program: DrugProgram) -> DrugProgram:
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY",""))
         context = _build_action_context(program)
         msg = client.messages.create(
-            model="claude-sonnet-4-20250514", max_tokens=1400,
+            model="claude-sonnet-4-6", max_tokens=1400,
             system=_ACTION_SYSTEM_PROMPT,
             messages=[{"role":"user","content":json.dumps(context, indent=2)}],
         )

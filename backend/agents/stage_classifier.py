@@ -167,7 +167,7 @@ def classify_program_stage(program: DrugProgram) -> ProgramStage:
             "uploaded_files": program.uploaded_files,
         }
         msg = client.messages.create(
-            model="claude-sonnet-4-20250514", max_tokens=400,
+            model="claude-sonnet-4-6", max_tokens=400,
             messages=[{"role":"user","content":f"{_CLASSIFIER_PROMPT}\n\n{json.dumps(ctx)}"}],
         )
         raw = msg.content[0].text.strip().replace("```json","").replace("```","").strip()

@@ -195,7 +195,7 @@ def _llm_audit_pass(program: DrugProgram, existing: list[AuditFlag]) -> list[Aud
         }
         existing_titles = [f.title for f in existing]
         msg = client.messages.create(
-            model="claude-sonnet-4-20250514", max_tokens=500,
+            model="claude-sonnet-4-6", max_tokens=500,
             messages=[{"role":"user","content":
                 _LLM_AUDIT_PROMPT.format(existing=existing_titles) + f"\n\n{json.dumps(ctx)}"}],
         )

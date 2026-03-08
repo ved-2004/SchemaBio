@@ -74,7 +74,7 @@ def _get_explanations(compound: str, your_val: float, unit: str, condition: str,
             lit_median=lit_median, lit_low=lit_low, lit_high=lit_high, fold=round(fold,1),
         )
         msg = client.messages.create(
-            model="claude-sonnet-4-20250514", max_tokens=300,
+            model="claude-sonnet-4-6", max_tokens=300,
             messages=[{"role":"user","content":prompt}],
         )
         raw = msg.content[0].text.strip().replace("```json","").replace("```","").strip()
