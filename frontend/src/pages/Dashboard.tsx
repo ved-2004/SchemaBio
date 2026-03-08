@@ -28,7 +28,7 @@ function useDashboardData() {
 
   return useMemo(() => {
     const organism = ps.entities.find((e) => e.type === "organism")?.value ?? "—";
-    const target = ps.entities.find((e) => e.type === "target_gene" || e.type === "mutation")?.value ?? "—";
+    const target = ps.entities.find((e) => e.type === "target" || e.type === "target_gene" || e.type === "mutation")?.value ?? "—";
     const compound = ps.entities.find((e) => e.type === "compound")?.value ?? "—";
     const assay = ps.entities.find((e) => e.type === "assay_type")?.value ?? "—";
     const programData = {
@@ -38,7 +38,7 @@ function useDashboardData() {
       summary: expIn.biological_context,
       entities: {
         organism,
-        target: target + (ps.entities.find((e) => e.type === "variant" || e.type === "mutation") ? ` (${ps.entities.find((e) => e.type === "variant" || e.type === "mutation")?.value})` : ""),
+        target: target + (ps.entities.find((e) => e.type === "variant" || e.type === "mutation") ? ` (${ps.entities.find((e) => e.type === "variant" || e.type === "mutation")?.value ?? ""})` : ""),
         compound,
         variant: ps.entities.filter((e) => e.type === "variant" || e.type === "mutation").map((e) => e.value).join(", ") || "—",
         assay: assay || "MIC / compound screen",

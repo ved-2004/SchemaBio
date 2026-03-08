@@ -96,12 +96,11 @@ def _shape_for_frontend(
         "hypotheses":         _make_hypotheses(output),
         "bioinfTasks":        _make_bioinf_tasks(output),
         "controlSuggestions": _make_control_suggestions(output),
-        "stageConfirmed":     output.stage_confirmed,
-        "keyHypothesis":      output.key_hypothesis,
-        "literatureQueries":  output.literature_queries,
-        "pipelineNotes":      output.pipeline_notes,
-        "status":             output.status,
-        # Pass full output for Layer 3 to consume
+        "stageConfirmed":     getattr(output, "stage_confirmed", ""),
+        "keyHypothesis":      getattr(output, "key_hypothesis", ""),
+        "literatureQueries":  getattr(output, "literature_queries", []) or [],
+        "pipelineNotes":      getattr(output, "pipeline_notes", []) or [],
+        "status":             getattr(output, "status", "final"),
         "_layer2_output":     _serialise(output),
     }
 
@@ -109,28 +108,30 @@ def _shape_for_frontend(
 def _make_recommendations(output: ExperimentDesignOutput) -> list[dict]:
     """Map ranked_experiments → RecommendationCard props."""
     recs = []
-    for exp in sorted(output.ranked_experiments, key=lambda e: e.rank):
+    experiments = getattr(output, "ranked_experiments", None) or []
+    for exp in sorted(experiments, key=lambda e: getattr(e, "rank", 0)):
         urgency = _urgency(exp)
-        # Derive confidence from rank + blocking flag
+        rank = getattr(exp, "rank", 1)
+        blocking = getattr(exp, "blocking", False)
         confidence = round(
-            1.0 if exp.blocking else max(0.60, 0.95 - (exp.rank - 1) * 0.05), 2
+            1.0 if blocking else max(0.60, 0.95 - (rank - 1) * 0.05), 2
         )
-        sources = [s for s in [exp.cro_type] if s]
+        sources = [s for s in [getattr(exp, "cro_type", "")] if s]
         recs.append({
-            "title":         exp.title,
-            "rationale":     exp.rationale,
+            "title":         getattr(exp, "title", ""),
+            "rationale":     getattr(exp, "rationale", ""),
             "confidence":    confidence,
             "urgency":       urgency,
             "sources":       sources,
-            "expectedValue": exp.expected_outcome,
+            "expectedValue": getattr(exp, "expected_outcome", ""),
         })
     return recs
 
 
 def _urgency(exp: RankedExperiment) -> str:
-    if exp.blocking:
+    if getattr(exp, "blocking", False):
         return "high"
-    if exp.stage_gate:
+    if getattr(exp, "stage_gate", False):
         return "medium"
     return "low"
 
@@ -138,25 +139,23 @@ def _urgency(exp: RankedExperiment) -> str:
 def _make_hypotheses(output: ExperimentDesignOutput) -> list[dict]:
     """Derive hypothesis cards from key_hypothesis + top blocking experiments."""
     hypotheses = []
+    key_hyp = getattr(output, "key_hypothesis", "") or ""
+    reasoning = getattr(output, "reasoning_steps", None) or []
+    experiments = getattr(output, "ranked_experiments", None) or []
 
-    if output.key_hypothesis:
-        evidence = (
-            output.reasoning_steps[0]
-            if output.reasoning_steps
-            else "Based on integrated analysis of program data."
-        )
+    if key_hyp:
+        evidence = reasoning[0] if reasoning else "Based on integrated analysis of program data."
         hypotheses.append({
-            "title":    output.key_hypothesis,
+            "title":    key_hyp,
             "evidence": evidence,
             "status":   "testing",
         })
 
-    # Secondary hypotheses from top blocking experiments
-    for exp in output.ranked_experiments:
-        if exp.blocking and exp.expected_outcome and len(hypotheses) < 3:
+    for exp in experiments:
+        if getattr(exp, "blocking", False) and getattr(exp, "expected_outcome", "") and len(hypotheses) < 3:
             hypotheses.append({
-                "title":    f"{exp.experiment_type.replace('_', ' ').title()} hypothesis",
-                "evidence": exp.expected_outcome,
+                "title":    f"{getattr(exp, 'experiment_type', 'experiment').replace('_', ' ').title()} hypothesis",
+                "evidence": getattr(exp, "expected_outcome", ""),
                 "status":   "untested",
             })
 
@@ -164,9 +163,10 @@ def _make_hypotheses(output: ExperimentDesignOutput) -> list[dict]:
 
 
 def _make_bioinf_tasks(output: ExperimentDesignOutput) -> list[str]:
+    analyses = getattr(output, "bioinformatics_analyses", None) or []
     return [
-        f"{t.analysis} ({t.tool})" if t.tool else t.analysis
-        for t in output.bioinformatics_analyses
+        f"{getattr(t, 'analysis', '')} ({getattr(t, 'tool', '')})" if getattr(t, "tool", None) else getattr(t, "analysis", "")
+        for t in analyses
     ]
 
 
@@ -174,18 +174,18 @@ def _make_control_suggestions(output: ExperimentDesignOutput) -> list[dict]:
     """Parse controls from experiments + missing_controls into typed suggestion cards."""
     seen:     set[str]   = set()
     controls: list[dict] = []
+    missing_controls = getattr(output, "missing_controls", None) or []
+    experiments = getattr(output, "ranked_experiments", None) or []
 
-    # From missing_controls (explicit gaps from LLM)
-    for ctrl in output.missing_controls:
+    for ctrl in missing_controls:
         ctype = _classify_control(ctrl)
         key   = ctrl.lower().strip()
         if key not in seen:
             seen.add(key)
             controls.append({"name": ctrl, "type": ctype})
 
-    # From individual experiment controls (deduplicated)
-    for exp in output.ranked_experiments:
-        for ctrl in exp.controls:
+    for exp in experiments:
+        for ctrl in getattr(exp, "controls", []) or []:
             ctype = _classify_control(ctrl)
             # Strip "positive control: " prefix etc.
             name = ctrl.split(":", 1)[-1].strip() if ":" in ctrl else ctrl

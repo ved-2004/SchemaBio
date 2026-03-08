@@ -1,15 +1,15 @@
 """
 ChromaDB-based persistent vector store for RAG documents.
 Three collections: card_resistance, imgt_sequences, alphafold_structures.
+
+ChromaDB is imported lazily so the app can start without it; RAG/Layer 2 will
+fail at first use with a clear error if chromadb is not installed.
 """
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
-
-import chromadb
-from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +22,31 @@ COLLECTIONS = {
 }
 
 
+def _import_chromadb() -> Any:
+    """Deferred import so backend can start without chromadb installed."""
+    try:
+        import chromadb
+        from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+        return chromadb, DefaultEmbeddingFunction
+    except ImportError as e:
+        raise ImportError(
+            "chromadb is required for RAG (Layer 2). Install with: pip install chromadb"
+        ) from e
+
+
 class VectorStore:
     """ChromaDB persistent vector store with cosine similarity search."""
 
     def __init__(self, persist_path: Optional[Path] = None):
+        chromadb, DefaultEmbeddingFunction = _import_chromadb()
+        self._chromadb = chromadb
         self.persist_path = persist_path or CHROMA_PATH
         self.persist_path.mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(path=str(self.persist_path))
         self._embedding_fn = DefaultEmbeddingFunction()
-        self._collections: dict[str, chromadb.Collection] = {}
+        self._collections: dict[str, Any] = {}
 
-    def _get_collection(self, name: str) -> chromadb.Collection:
+    def _get_collection(self, name: str) -> Any:
         if name not in self._collections:
             self._collections[name] = self._client.get_or_create_collection(
                 name=name,

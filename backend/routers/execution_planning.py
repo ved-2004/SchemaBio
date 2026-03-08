@@ -97,7 +97,7 @@ def _shape_for_frontend(
 
 
 def _make_readiness_items(raw: dict) -> list[dict]:
-    ra  = raw.get("readiness_assessment", {})
+    ra  = raw.get("readiness_assessment") or {}
     ev  = _pct(ra.get("evidence_completeness_pct"))
     gmp = _pct(ra.get("gmp_readiness_pct"))
 
@@ -119,7 +119,7 @@ def _make_readiness_items(raw: dict) -> list[dict]:
 
 def _make_cro_types(raw: dict) -> list[dict]:
     cros = []
-    for pr in raw.get("partner_recommendations", []):
+    for pr in raw.get("partner_recommendations") or []:
         ptype    = pr.get("partner_type", "CRO")
         desc     = pr.get("rationale", "")
         urgency  = pr.get("readiness_required") or "Needed now"
@@ -129,7 +129,7 @@ def _make_cro_types(raw: dict) -> list[dict]:
 
 def _make_grants(raw: dict, epi: ExecutionPlanningInput) -> list[dict]:
     grants = []
-    for fo in raw.get("funding_opportunities", [])[:5]:
+    for fo in (raw.get("funding_opportunities") or [])[:5]:
         fit_score = fo.get("fit_score", 0.0)
         fit_label = "High" if fit_score >= 0.7 else ("Medium" if fit_score >= 0.4 else "Low")
         focus     = fo.get("fit_rationale", fo.get("agency", ""))[:80]
@@ -156,14 +156,11 @@ _IND_CHECKLIST: list[tuple[str, list[str]]] = [
 ]
 
 def _make_evidence_checklist(raw: dict, l2: Optional[dict]) -> list[dict]:
-    # Signals present in the program (from Layer 3 readiness_assessment.signals)
-    present_kinds: set[str] = {
-        s.get("kind", "") for s in raw.get("readiness_assessment", {}).get("signals", [])
-    }
-    # Items explicitly listed as missing in Layer 3
-    missing_elements: set[str] = {
-        m.get("element", "").lower()
-        for m in raw.get("missing_evidence_package_elements", [])
+    ra = raw.get("readiness_assessment") or {}
+    present_kinds = {s.get("kind", "") for s in ra.get("signals") or []}
+    missing_elements = {
+        (m.get("element") or "").lower()
+        for m in raw.get("missing_evidence_package_elements") or []
     }
 
     checklist = []
@@ -187,7 +184,7 @@ def _make_evidence_checklist(raw: dict, l2: Optional[dict]) -> list[dict]:
 
 def _make_manufacturing_flags(raw: dict) -> list[dict]:
     flags = []
-    for blocker in raw.get("translational_blockers", []):
+    for blocker in raw.get("translational_blockers") or []:
         b_text   = blocker.get("blocker", "")
         severity = blocker.get("severity", "warning")
         # Normalise severity to "warning" | "critical"

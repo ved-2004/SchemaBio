@@ -56,15 +56,13 @@ export default function Execution() {
     );
   }
 
-  const {
-    readinessItems,
-    croTypes,
-    grants,
-    evidenceChecklist,
-    manufacturingFlags,
-  } = executionPlanningResponse;
+  const readinessItems = executionPlanningResponse.readinessItems ?? [];
+  const croTypes = executionPlanningResponse.croTypes ?? [];
+  const grants = executionPlanningResponse.grants ?? [];
+  const evidenceChecklist = executionPlanningResponse.evidenceChecklist ?? [];
+  const manufacturingFlags = executionPlanningResponse.manufacturingFlags ?? [];
 
-  const doneCount = evidenceChecklist.filter((e) => e.done).length;
+  const doneCount = evidenceChecklist.filter((e) => e?.done).length;
 
   // ── Loaded ─────────────────────────────────────────────────────────────────
   return (

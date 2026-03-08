@@ -34,8 +34,9 @@ export default function Ingestion() {
       const data = await fetchDemoIngestion();
       setIngestionResponse(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load demo");
-      setIngestionResponse(MOCK_INGESTION_RESPONSE);
+      const msg = e instanceof Error ? e.message : "Failed to load demo";
+      setError(msg);
+      setIngestionResponse(null);
     } finally {
       setLoading(false);
     }
@@ -77,7 +78,7 @@ export default function Ingestion() {
 
       {error && (
         <div className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-          {error} — showing mock data as fallback.
+          {error} — load mock demo below to see the pipeline with sample data.
         </div>
       )}
 

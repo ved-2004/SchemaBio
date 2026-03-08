@@ -60,12 +60,10 @@ export default function Experiments() {
     );
   }
 
-  const {
-    recommendations,
-    hypotheses,
-    bioinfTasks,
-    controlSuggestions,
-  } = experimentDesignResponse;
+  const recommendations = experimentDesignResponse.recommendations ?? [];
+  const hypotheses = experimentDesignResponse.hypotheses ?? [];
+  const bioinfTasks = experimentDesignResponse.bioinfTasks ?? [];
+  const controlSuggestions = experimentDesignResponse.controlSuggestions ?? [];
 
   // ── Loaded ─────────────────────────────────────────────────────────────────
   return (
