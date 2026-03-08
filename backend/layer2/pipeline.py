@@ -40,9 +40,9 @@ load_dotenv()
 # Configuration
 # ---------------------------------------------------------------------------
 
-REASONING_MODEL   = "claude-opus-4-6"
-FORMATTING_MODEL  = "claude-haiku-4-5-20251001"
-COMPRESSION_MODEL = "claude-haiku-4-5-20251001"
+REASONING_MODEL   = "claude-sonnet-4-20250514"
+FORMATTING_MODEL  = "claude-sonnet-4-20250514"
+COMPRESSION_MODEL = "claude-sonnet-4-20250514"
 
 MAX_ITERATIONS           = 4
 CONFIDENCE_THRESHOLD     = 0.72

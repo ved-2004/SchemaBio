@@ -114,7 +114,7 @@ async def _extract_claims_llm(abstract: str) -> list[dict]:
     try:
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY",""))
         msg = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=300,
+            model="claude-sonnet-4-20250514", max_tokens=300,
             messages=[{"role":"user","content": f"{_CLAIM_EXTRACT_PROMPT}\n\n{abstract[:800]}"}],
         )
         raw = msg.content[0].text.strip().replace("```json","").replace("```","").strip()
