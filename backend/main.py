@@ -44,6 +44,14 @@ app = FastAPI(
 from .routers import ingestion as ingestion_router
 app.include_router(ingestion_router.router)
 
+# RAG layer — CARD / AlphaFold / IMGT retrieval for Layers 2 & 3
+from .routers import rag as rag_router
+app.include_router(rag_router.router)
+
+# Layer 3 — Execution / Translational Planning
+from .routers import execution_planning as execution_planning_router
+app.include_router(execution_planning_router.router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000","http://localhost:5173","http://localhost:4173"],
