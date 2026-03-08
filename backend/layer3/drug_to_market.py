@@ -1433,13 +1433,17 @@ def _epi_to_legacy_state(epi: ExecutionPlanningInput) -> LegacyProgramState:
     )
 
 
-async def run_layer3(epi: ExecutionPlanningInput) -> dict:
+async def run_layer3(
+    epi: ExecutionPlanningInput,
+    layer2_output: Optional[dict] = None,
+) -> dict:
     """
     SchemaBio Layer 3 entry point.
 
-    Accepts ExecutionPlanningInput from the ingestion layer and returns
-    a structured execution roadmap matching the schema in:
-      docs/execution-planning-layer-handoff.md
+    Accepts ExecutionPlanningInput from the ingestion layer and (optionally) the
+    Layer 2 ExperimentDesignOutput dict.  Layer 2 output is used to:
+      - Surface the top recommended experiment in next_steps
+      - Enrich the evidence checklist with in-plan items
 
     Output fields:
       partner_recommendations, funding_opportunities,
@@ -1451,6 +1455,17 @@ async def run_layer3(epi: ExecutionPlanningInput) -> dict:
     """
     state = _epi_to_legacy_state(epi)
     state = await _run_engine(state)
+
+    # Enrich next_steps with Layer 2 top experiment (if available)
+    top_experiment_step = "Execute top-ranked experiment (see Layer 2 recommendations)"
+    if layer2_output:
+        ranked = layer2_output.get("ranked_experiments", [])
+        if ranked:
+            top = ranked[0]
+            top_experiment_step = (
+                f"Run Layer 2 priority experiment: {top.get('title', '')} "
+                f"({top.get('cro_type', 'in-house')})"
+            )
 
     rt = state.translational_readiness
     evidence_refs = list(epi.evidence_bundle.file_refs)
@@ -1508,7 +1523,7 @@ async def run_layer3(epi: ExecutionPlanningInput) -> dict:
                 for sig in epi.development_signals
             ],
             "next_steps": [
-                "Execute top-ranked experiment (see Layer 2 recommendations)",
+                top_experiment_step,
                 f"Apply to top funding match — {state.funding_targets[0].program_name if state.funding_targets else 'check grant portals'}",
                 "Request Pre-IND meeting with FDA CDER Division of Anti-Infectives (Type B meeting)",
                 f"Engage {state.cro_details.get('partner_type', 'CRO')} for next experimental phase",

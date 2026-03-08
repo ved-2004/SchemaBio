@@ -24,6 +24,9 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
+load_dotenv()  # reads ANTHROPIC_API_KEY (and any other vars) from .env
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -47,6 +50,10 @@ app.include_router(ingestion_router.router)
 # RAG layer — CARD / AlphaFold / IMGT retrieval for Layers 2 & 3
 from .routers import rag as rag_router
 app.include_router(rag_router.router)
+
+# Layer 2 — Experiment Design (LLM reasoning)
+from .routers import experiment_design as experiment_design_router
+app.include_router(experiment_design_router.router)
 
 # Layer 3 — Execution / Translational Planning
 from .routers import execution_planning as execution_planning_router
