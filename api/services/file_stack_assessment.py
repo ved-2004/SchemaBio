@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from ..models.ingestion import (
+from api.models.ingestion import (
     FileStackItem,
     FileStackAssessment,
     ProgressionStatus,

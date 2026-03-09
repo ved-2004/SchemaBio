@@ -326,7 +326,7 @@ def _parse_vcf_file(path: Path) -> tuple[list[dict], TargetProfile, EvidencePack
     """Parse VCF file and return variants, target info, evidence."""
     ev = EvidencePackage()
     try:
-        from .vcf_parser import _parse_vcf_plaintext
+        from api.parsers.vcf_parser import _parse_vcf_plaintext
         variants_raw = _parse_vcf_plaintext(path)
         variants = [v.model_dump() for v in variants_raw]
         genes = list({v["gene"] for v in variants if v.get("gene") != "UNKNOWN"})
@@ -430,7 +430,7 @@ def build_drug_program_from_files(
     if pdf_path and pdf_path.exists():
         logger.info(f"Parsing PDF: {pdf_path.name}")
         try:
-            from .pdf_parser import parse_pdf
+            from api.parsers.pdf_parser import parse_pdf
             pdf_ctx = parse_pdf(pdf_path)
             if pdf_ctx.cell_line:
                 program.efficacy.cell_line = pdf_ctx.cell_line

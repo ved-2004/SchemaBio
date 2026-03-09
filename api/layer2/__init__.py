@@ -1,11 +1,11 @@
-from .models import (
+from api.layer2.models import (
     BioinformaticsTask,
     ClarificationQuestion,
     ExperimentDesignOutput,
     PipelineState,
     RankedExperiment,
 )
-from .pipeline import ExperimentDesignPipeline
+from api.layer2.pipeline import ExperimentDesignPipeline
 
 __all__ = [
     "ExperimentDesignPipeline",
