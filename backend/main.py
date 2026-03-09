@@ -44,19 +44,19 @@ app = FastAPI(
 )
 
 # SchemaBio ingestion layer (source of truth for program state)
-from routers import ingestion as ingestion_router
+from .routers import ingestion as ingestion_router
 app.include_router(ingestion_router.router)
 
 # RAG layer — CARD / AlphaFold / IMGT retrieval for Layers 2 & 3
-from routers import rag as rag_router
+from .routers import rag as rag_router
 app.include_router(rag_router.router)
 
 # Layer 2 — Experiment Design (LLM reasoning)
-from routers import experiment_design as experiment_design_router
+from .routers import experiment_design as experiment_design_router
 app.include_router(experiment_design_router.router)
 
 # Layer 3 — Execution / Translational Planning
-from routers import execution_planning as execution_planning_router
+from .routers import execution_planning as execution_planning_router
 app.include_router(execution_planning_router.router)
 
 _CORS_ORIGINS = [
