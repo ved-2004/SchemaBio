@@ -1,10 +1,10 @@
 /**
  * SchemaBio ingestion API client.
- * Vite proxy: /api -> http://localhost:8000
  */
 import type { IngestionResponse } from "@/types/ingestion";
+import { API_BASE_URL } from "./config";
 
-const API_BASE = "/api";
+const API_BASE = `${API_BASE_URL}/api`;
 
 export async function fetchDemoIngestion(): Promise<IngestionResponse> {
   const res = await fetch(`${API_BASE}/demo-ingestion`);

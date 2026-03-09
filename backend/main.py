@@ -59,9 +59,21 @@ app.include_router(experiment_design_router.router)
 from .routers import execution_planning as execution_planning_router
 app.include_router(execution_planning_router.router)
 
+_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:4173",
+    # Render / production — set FRONTEND_URL env var on the backend service
+    *(
+        [os.environ["FRONTEND_URL"]]
+        if os.environ.get("FRONTEND_URL")
+        else []
+    ),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000","http://localhost:5173","http://localhost:4173"],
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
