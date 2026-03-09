@@ -17,13 +17,13 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..rag.rag_service import (
+from api.rag.rag_service import (
     ensure_indexed_and_query,
     index_for_program_state,
     query_rag,
     get_vector_store,
 )
-from ..rag.vector_store import COLLECTIONS
+from api.rag.vector_store import COLLECTIONS
 
 router = APIRouter(prefix="/api/rag", tags=["rag"])
 

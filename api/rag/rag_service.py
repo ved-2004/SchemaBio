@@ -20,11 +20,11 @@ import asyncio
 import logging
 from typing import Any
 
-from .vector_store import VectorStore, COLLECTIONS
-from .query_builder import build_queries, extract_genes, extract_drug_classes
-from .fetchers.card_fetcher import fetch_card_documents
-from .fetchers.alphafold_fetcher import fetch_alphafold_documents
-from .fetchers.imgt_fetcher import fetch_imgt_documents
+from api.rag.vector_store import VectorStore, COLLECTIONS
+from api.rag.query_builder import build_queries, extract_genes, extract_drug_classes
+from api.rag.fetchers.card_fetcher import fetch_card_documents
+from api.rag.fetchers.alphafold_fetcher import fetch_alphafold_documents
+from api.rag.fetchers.imgt_fetcher import fetch_imgt_documents
 
 logger = logging.getLogger(__name__)
 

@@ -26,7 +26,7 @@ from typing import Optional
 
 import pandas as pd
 
-from ..models.drug_program import (
+from api.models.drug_program import (
     DrugProgram, CompoundProfile, TargetProfile, ResistanceProfile,
     EfficacySignals, EvidencePackage, ProgramStage,
 )

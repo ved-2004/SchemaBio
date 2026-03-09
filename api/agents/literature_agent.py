@@ -23,7 +23,7 @@ from typing import Optional
 import anthropic
 import httpx
 
-from ..models.drug_program import DrugProgram, LiteratureResult
+from api.models.drug_program import DrugProgram, LiteratureResult
 
 logger = logging.getLogger(__name__)
 

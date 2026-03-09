@@ -44,19 +44,19 @@ app = FastAPI(
 )
 
 # SchemaBio ingestion layer (source of truth for program state)
-from .routers import ingestion as ingestion_router
+from api.routers import ingestion as ingestion_router
 app.include_router(ingestion_router.router)
 
 # RAG layer — CARD / AlphaFold / IMGT retrieval for Layers 2 & 3
-from .routers import rag as rag_router
+from api.routers import rag as rag_router
 app.include_router(rag_router.router)
 
 # Layer 2 — Experiment Design (LLM reasoning)
-from .routers import experiment_design as experiment_design_router
+from api.routers import experiment_design as experiment_design_router
 app.include_router(experiment_design_router.router)
 
 # Layer 3 — Execution / Translational Planning
-from .routers import execution_planning as execution_planning_router
+from api.routers import execution_planning as execution_planning_router
 app.include_router(execution_planning_router.router)
 
 _CORS_ORIGINS = [
@@ -124,7 +124,7 @@ async def run_demo():
     Streams SSE events in real-time.
     Demo always works — no API key required for demo data.
     """
-    from .agents.orchestrator import run_pipeline
+    from api.agents.orchestrator import run_pipeline
 
     async def pipeline_with_store():
         async for event in run_pipeline(use_demo=True):
@@ -157,7 +157,7 @@ async def analyze(
 
     Falls back to demo data if no files uploaded.
     """
-    from .agents.orchestrator import run_pipeline
+    from api.agents.orchestrator import run_pipeline
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="aiden_"))
     vcf_path = csv_paths = pdf_path = txt_paths = None

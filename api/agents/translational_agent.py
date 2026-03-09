@@ -26,7 +26,7 @@ from typing import Optional
 
 import anthropic
 
-from ..models.drug_program import (
+from api.models.drug_program import (
     DrugProgram, ProgramStage, ManufacturingProfile,
     EvidencePackage, ExecutionGuidance, CRONeed, FundingOpportunity,
 )

@@ -5,7 +5,7 @@ Fully mocked antibiotic resistance demo IngestionResponse for GET /api/demo-inge
 Matches the exact ingestion contract; no real parsing.
 """
 
-from ..models.ingestion import (
+from api.models.ingestion import (
     IngestionResponse,
     ProgramState,
     ExperimentDesignInput,

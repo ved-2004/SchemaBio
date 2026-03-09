@@ -27,9 +27,9 @@ from pathlib import Path
 # ── Bootstrap path so we can run as a script too ─────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from rag.rag_service import ensure_indexed_and_query, index_for_program_state, query_rag
-from rag.vector_store import VectorStore, COLLECTIONS
-from rag.query_builder import build_queries, extract_genes
+from api.rag.rag_service import ensure_indexed_and_query, index_for_program_state, query_rag
+from api.rag.vector_store import VectorStore, COLLECTIONS
+from api.rag.query_builder import build_queries, extract_genes
 
 
 # ── Shared test fixtures ──────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ async def run_tests():
     # ─────────────────────────────────────────────────────────────────────────
 
     # Monkey-patch get_vector_store to use our temp store for this test session
-    import rag.rag_service as rag_svc
+    import api.rag.rag_service as rag_svc
     temp_store = _fresh_store()
     rag_svc._store = temp_store
 

@@ -26,7 +26,7 @@ from typing import Any, Optional
 import anthropic
 from dotenv import load_dotenv
 
-from .models import (
+from api.layer2.models import (
     BioinformaticsTask,
     ClarificationQuestion,
     ExperimentDesignOutput,

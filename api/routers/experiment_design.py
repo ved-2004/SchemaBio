@@ -29,10 +29,10 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..models.ingestion import ExperimentDesignInput, ProgramState
-from ..rag.rag_service import ensure_indexed_and_query
-from ..layer2.pipeline import ExperimentDesignPipeline
-from ..layer2.models import ExperimentDesignOutput, RankedExperiment
+from api.models.ingestion import ExperimentDesignInput, ProgramState
+from api.rag.rag_service import ensure_indexed_and_query
+from api.layer2.pipeline import ExperimentDesignPipeline
+from api.layer2.models import ExperimentDesignOutput, RankedExperiment
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/experiment-design", tags=["experiment-design"])

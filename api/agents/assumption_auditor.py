@@ -24,7 +24,7 @@ from typing import Optional
 
 import anthropic
 
-from ..models.drug_program import AuditFlag, DrugProgram
+from api.models.drug_program import AuditFlag, DrugProgram
 
 logger = logging.getLogger(__name__)
 

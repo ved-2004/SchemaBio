@@ -33,7 +33,7 @@ import os
 
 import anthropic
 
-from ..models.drug_program import DrugProgram, DrugProgramAction
+from api.models.drug_program import DrugProgram, DrugProgramAction
 
 logger = logging.getLogger(__name__)
 

@@ -22,7 +22,7 @@ from typing import Optional
 
 import anthropic
 
-from ..models.drug_program import DrugProgram, ProgramStage, STAGE_META
+from api.models.drug_program import DrugProgram, ProgramStage, STAGE_META
 
 logger = logging.getLogger(__name__)
 
