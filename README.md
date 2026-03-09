@@ -54,23 +54,7 @@ Antibiotic resistance programs live in spreadsheets, VCFs, and PDFs. Decisions g
 
 ---
 
-## Quick start
-
-```bash
-# Backend (from repo root)
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-# API at http://localhost:8000  ·  Docs at http://localhost:8000/docs
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run dev
-# App at http://localhost:5173
-```
-
-**Try it:** Open the app → **Ingestion** → “Load demo (API)” or upload your own CSV/VCF/PDF. Then open **Program Dashboard** to see program state, stage, entities, signals, and handoff previews.
+The app is deployed via Vercel.
 
 ---
 
