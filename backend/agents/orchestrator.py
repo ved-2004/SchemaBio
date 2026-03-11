@@ -61,7 +61,7 @@ async def run_pipeline(
         yield _phase("parse", "Parsing uploaded files deterministically")
 
         if use_demo:
-            from api.data.demo_program import build_antibiotic_demo_program
+            from backend.data import build_antibiotic_demo_program
             program = build_antibiotic_demo_program()
         else:
             from backend.parsers.universal_parser import build_drug_program_from_files
@@ -114,7 +114,7 @@ async def run_pipeline(
 
         # ── Stage 6: Epistemic Gap Map ──────────────────────────────────
         yield _phase("gap", "Mapping knowledge frontier")
-        from api.agents.epistemic_gap_mapper import run_epistemic_gap_mapper
+        from backend.agents.contradiction_detector import run_epistemic_gap_mapper
         run_epistemic_gap_mapper(program)
         yield {"event": "epistemic_gaps", "data": [g.model_dump() for g in program.epistemic_gaps]}
         yield _last_trace(program)
