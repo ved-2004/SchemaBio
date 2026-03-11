@@ -18,7 +18,7 @@ DEMO_DIR = Path(__file__).parent.parent / "data" / "demo"
 
 class TestVCFParser:
     def setup_method(self):
-        from backend.parsers.vcf_parser import parse_vcf
+        from api.parsers.vcf_parser import parse_vcf
         self.parse = parse_vcf
         self.vcf_path = DEMO_DIR / "gyra_variants.vcf"
 
@@ -68,7 +68,7 @@ class TestVCFParser:
 
 class TestAssayParser:
     def setup_method(self):
-        from backend.parsers.assay_parser import parse_resistance_assay
+        from api.parsers.assay_parser import parse_resistance_assay
         self.parse = parse_resistance_assay
         self.csv_path = DEMO_DIR / "gyrase_resistance.csv"
 
@@ -129,7 +129,7 @@ class TestAssayParser:
 
 class TestCompoundParser:
     def setup_method(self):
-        from backend.parsers.compound_parser import parse_compound_screen
+        from api.parsers.compound_parser import parse_compound_screen
         self.parse = parse_compound_screen
         self.csv_path = DEMO_DIR / "compound14_screen.csv"
 
@@ -189,37 +189,37 @@ class TestCompoundParser:
 
 class TestPDFParser:
     def test_pdf_parser_imports(self):
-        from backend.parsers.pdf_parser import parse_pdf
+        from api.parsers.pdf_parser import parse_pdf
         assert parse_pdf is not None
 
     def test_pdf_handles_missing_file(self, tmp_path):
-        from backend.parsers.pdf_parser import ParsedPDF
+        from api.parsers.pdf_parser import ParsedPDF
         # ParsedPDF with defaults should not crash
         result = ParsedPDF()
         assert result.key_genes == []
         assert result.doc_type == "unknown"
 
     def test_gene_extraction_from_text(self):
-        from backend.parsers.pdf_parser import _extract_genes
+        from api.parsers.pdf_parser import _extract_genes
         text = "The gyrA D87N mutation in E. coli confers resistance. parC S80I also observed."
         genes = _extract_genes(text)
         assert "gyrA" in genes or "gyra" in [g.lower() for g in genes]
 
     def test_organism_extraction(self):
-        from backend.parsers.pdf_parser import _extract_organisms
+        from api.parsers.pdf_parser import _extract_organisms
         text = "E. coli ATCC 25922 was used as wild-type. K. pneumoniae isolates were tested."
         organisms, gram = _extract_organisms(text)
         assert len(organisms) >= 1
         assert gram == "gram_negative"
 
     def test_mechanism_extraction(self):
-        from backend.parsers.pdf_parser import _extract_mechanisms
+        from api.parsers.pdf_parser import _extract_mechanisms
         text = "Efflux pumps AcrAB-TolC mediate resistance. gyrase inhibition was confirmed."
         mechs, kws = _extract_mechanisms(text)
         assert len(mechs) >= 1
 
     def test_quantitative_claim_extraction(self):
-        from backend.parsers.pdf_parser import _extract_quantitative
+        from api.parsers.pdf_parser import _extract_quantitative
         text = "The IC50 of compound A was 45 nM against GyrA. MIC of 0.125 μg/mL was observed."
         claims = _extract_quantitative(text)
         assert len(claims) >= 1
@@ -230,7 +230,7 @@ class TestPDFParser:
 
 class TestUniversalParser:
     def test_builds_drug_program_from_demo_files(self):
-        from backend.parsers.universal_parser import build_drug_program_from_files
+        from api.parsers.universal_parser import build_drug_program_from_files
         vcf_path = DEMO_DIR / "gyra_variants.vcf"
         csv_paths = [DEMO_DIR / "gyrase_resistance.csv", DEMO_DIR / "compound14_screen.csv"]
 
@@ -249,7 +249,7 @@ class TestUniversalParser:
         assert len(program.resistance.resistant_strains) >= 1
 
     def test_evidence_flags_set(self):
-        from backend.parsers.universal_parser import build_drug_program_from_files
+        from api.parsers.universal_parser import build_drug_program_from_files
         csv_paths = [DEMO_DIR / "gyrase_resistance.csv"]
         if not csv_paths[0].exists():
             pytest.skip("Demo files not found")
@@ -258,7 +258,7 @@ class TestUniversalParser:
         assert program.evidence.has_mic_data or program.evidence.has_resistance_profiling
 
     def test_completeness_pct_positive(self):
-        from backend.parsers.universal_parser import build_drug_program_from_files
+        from api.parsers.universal_parser import build_drug_program_from_files
         csv_paths = [DEMO_DIR / "gyrase_resistance.csv", DEMO_DIR / "compound14_screen.csv"]
         missing = [p for p in csv_paths if not p.exists()]
         if missing:

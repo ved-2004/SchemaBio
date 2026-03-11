@@ -1,0 +1,27 @@
+Burkholderia antibiotic resistance and sensitivity flipping — target rationale
+
+Context
+-------
+Burkholderia spp. (e.g. B. cepacia complex) pose a significant challenge in the clinic due to intrinsic and acquired antibiotic resistance. We are interested in mutation-driven resistance and in "sensitivity flipping" or collateral sensitivity: strains that become resistant to one drug may show restored sensitivity to another, or vice versa, depending on genetic background and treatment context.
+
+Scientific theme
+----------------
+- Mutation-driven resistance/sensitivity switching across lineages
+- Association of gyrA, parC, and efflux (e.g. acrB) variants with resistance and flipping phenotypes
+- Need for mechanism characterization and follow-up validation
+- Compound prioritization for isolates showing flipping or collateral sensitivity
+
+Goals
+-----
+1. Characterize resistance and collateral sensitivity patterns across Burkholderia lineages (L1, L2, L3, reference).
+2. Link variant calls (gyrA, parC, efflux) to MIC and fold-shift data.
+3. Prioritize compound hits (e.g. Bcep-Inh-01, Bcep-Inh-05) for expanded isolate testing.
+4. Build an evidence package sufficient for experimental validation planning.
+5. Identify gaps requiring external support: microbiology CRO, bioinformatics, and eventual translational planning.
+
+Next steps
+----------
+- Expand isolate panel (more lineages, more antibiotics)
+- Validate top compounds in time-kill and resistance reversal assays
+- Consider ADMET and manufacturability for lead candidates
+- Document reproducibility and recommend replication strategy

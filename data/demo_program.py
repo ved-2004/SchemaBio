@@ -17,7 +17,7 @@ Demo always works — pre-built, no backend required.
 """
 
 from __future__ import annotations
-from api.api.models.drug_program import (
+from ..api.models.drug_program import (
     DrugProgram, TargetProfile, CompoundProfile, ResistanceProfile,
     EfficacySignals, EvidencePackage, ManufacturingProfile,
     ExecutionGuidance, RegulatoryReadiness, CRONeed, FundingOpportunity,

@@ -1,1 +1,0 @@
-# SchemaBio API routers
