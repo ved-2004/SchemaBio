@@ -57,10 +57,10 @@ async def run_full_pipeline():
     # ── STEP 1: Parsers ───────────────────────────────────────────────
     head("STEP 1 — Deterministic Parsing (no LLM)")
 
-    from api.parsers.vcf_parser import parse_vcf
-    from api.parsers.assay_parser import parse_resistance_assay
-    from api.parsers.compound_parser import parse_compound_screen
-    from api.parsers.universal_parser import build_drug_program_from_files
+    from backend.parsers.vcf_parser import parse_vcf
+    from backend.parsers.assay_parser import parse_resistance_assay
+    from backend.parsers.compound_parser import parse_compound_screen
+    from backend.parsers.universal_parser import build_drug_program_from_files
 
     vcf_path  = DEMO_DIR / "gyra_variants.vcf"
     res_path  = DEMO_DIR / "gyrase_resistance.csv"
@@ -103,7 +103,7 @@ async def run_full_pipeline():
 
     # ── STEP 3: Stage Classifier ──────────────────────────────────────
     head("STEP 3 — Stage Classification")
-    from api.agents.stage_classifier import classify_program_stage
+    from backend.agents.stage_classifier import classify_program_stage
     t = time.time()
     stage = classify_program_stage(program)
     ok(f"Stage: {program.stage_label} ({round(program.stage_confidence*100)}%) in {time.time()-t:.2f}s")
@@ -111,7 +111,7 @@ async def run_full_pipeline():
 
     # ── STEP 4: Assumption Auditor ────────────────────────────────────
     head("STEP 4 — Assumption Auditor")
-    from api.agents.assumption_auditor import run_assumption_auditor
+    from backend.agents.assumption_auditor import run_assumption_auditor
     t = time.time()
     flags = run_assumption_auditor(program)
     ok(f"{len(flags)} flags in {time.time()-t:.2f}s")
@@ -121,7 +121,7 @@ async def run_full_pipeline():
 
     # ── STEP 5: Literature ────────────────────────────────────────────
     head("STEP 5 — Literature Retrieval")
-    from api.agents.literature_agent import retrieve_literature
+    from backend.agents.literature_agent import retrieve_literature
     t = time.time()
     await retrieve_literature(program)
     ok(f"{len(program.literature)} papers in {time.time()-t:.2f}s")
@@ -130,7 +130,7 @@ async def run_full_pipeline():
 
     # ── STEP 6: Contradiction Detector ───────────────────────────────
     head("STEP 6 — Contradiction Detection")
-    from api.agents.contradiction_detector import run_contradiction_detector
+    from backend.agents.contradiction_detector import run_contradiction_detector
     t = time.time()
     run_contradiction_detector(program)
     if program.contradictions:
@@ -144,7 +144,7 @@ async def run_full_pipeline():
 
     # ── STEP 7: Epistemic Gap Map ─────────────────────────────────────
     head("STEP 7 — Epistemic Gap Map")
-    from api.agents.contradiction_detector import _load_demo_gaps
+    from backend.agents.contradiction_detector import _load_demo_gaps
     t = time.time()
     _load_demo_gaps(program)
     ok(f"{len(program.epistemic_gaps)} gaps in {time.time()-t:.2f}s")
@@ -154,7 +154,7 @@ async def run_full_pipeline():
 
     # ── STEP 8: Translational Agent ───────────────────────────────────
     head("STEP 8 — Translational Feasibility")
-    from api.agents.translational_agent import run_translational_agent
+    from backend.agents.translational_agent import run_translational_agent
     t = time.time()
     run_translational_agent(program)
     ok(f"Translational analysis in {time.time()-t:.2f}s")
@@ -164,7 +164,7 @@ async def run_full_pipeline():
 
     # ── STEP 9: Action Generator ──────────────────────────────────────
     head("STEP 9 — Action Plan")
-    from api.agents.action_generator import generate_actions
+    from backend.agents.action_generator import generate_actions
     t = time.time()
     generate_actions(program)
     ok(f"{len(program.ranked_actions)} ranked actions in {time.time()-t:.2f}s")
@@ -201,9 +201,9 @@ def run_parsers_only():
     """Run only the deterministic parsers — no API key needed."""
     print(f"\n{BOLD}Parser-only mode (no API key needed){RESET}\n")
 
-    from api.parsers.vcf_parser import parse_vcf
-    from api.parsers.assay_parser import parse_resistance_assay
-    from api.parsers.compound_parser import parse_compound_screen
+    from backend.parsers.vcf_parser import parse_vcf
+    from backend.parsers.assay_parser import parse_resistance_assay
+    from backend.parsers.compound_parser import parse_compound_screen
 
     vcf_path = DEMO_DIR / "gyra_variants.vcf"
     res_path = DEMO_DIR / "gyrase_resistance.csv"

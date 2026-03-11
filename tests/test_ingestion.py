@@ -20,7 +20,7 @@ class TestIngestionService:
     """Test run_ingestion() with demo paths."""
 
     def test_run_ingestion_returns_ingestion_response(self):
-        from api.services.ingestion_service import run_ingestion
+        from backend.services.ingestion_service import run_ingestion
         paths = list(DEMO_DIR.glob("*.csv"))[:1]  # at least one file
         if not paths:
             pytest.skip("No demo CSV in data/demo/")
@@ -31,7 +31,7 @@ class TestIngestionService:
         assert hasattr(response, "execution_planning_input")
 
     def test_program_state_has_required_fields(self):
-        from api.services.ingestion_service import run_ingestion
+        from backend.services.ingestion_service import run_ingestion
         paths = list(DEMO_DIR.glob("*.csv"))[:1]
         if not paths:
             pytest.skip("No demo CSV in data/demo/")
@@ -45,7 +45,7 @@ class TestIngestionService:
         assert "evidence_index" in ps.model_dump()
 
     def test_stage_estimate_present_with_demo_data(self):
-        from api.services.ingestion_service import run_ingestion
+        from backend.services.ingestion_service import run_ingestion
         paths = [p for p in DEMO_DIR.iterdir() if p.suffix in (".csv", ".vcf")][:3]
         if not paths:
             pytest.skip("No demo files in data/demo/")
@@ -62,7 +62,7 @@ class TestIngestionService:
 @pytest.fixture
 def client():
     from fastapi.testclient import TestClient
-    from api.main import app
+    from backend.main import app
     return TestClient(app)
 
 
