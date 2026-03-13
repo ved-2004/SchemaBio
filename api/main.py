@@ -124,7 +124,7 @@ async def run_demo():
     Streams SSE events in real-time.
     Demo always works — no API key required for demo data.
     """
-    from api.agents.orchestrator import run_pipeline
+    from api.legacy.agents.orchestrator import run_pipeline
 
     async def pipeline_with_store():
         async for event in run_pipeline(use_demo=True):
@@ -157,7 +157,7 @@ async def analyze(
 
     Falls back to demo data if no files uploaded.
     """
-    from api.agents.orchestrator import run_pipeline
+    from api.legacy.agents.orchestrator import run_pipeline
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="aiden_"))
     vcf_path = csv_paths = pdf_path = txt_paths = None

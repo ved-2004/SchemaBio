@@ -33,7 +33,7 @@ import os
 
 import anthropic
 
-from api.models.drug_program import DrugProgram, DrugProgramAction
+from api.legacy.models.drug_program import DrugProgram, DrugProgramAction
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +179,7 @@ def generate_actions(program: DrugProgram) -> DrugProgram:
 
 def _fallback_actions(program: DrugProgram) -> None:
     """Rule-based fallback actions when LLM fails."""
-    from ..agents.stage_classifier import get_stage_gate_requirements
+    from api.legacy.agents.stage_classifier import get_stage_gate_requirements
     stage_reqs = get_stage_gate_requirements(program.current_stage)
     comp = program.compound.name or "lead compound"
     target = program.target.gene or "target"

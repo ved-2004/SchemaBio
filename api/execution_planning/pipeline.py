@@ -30,8 +30,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Any
 
-from api.agents.fda_agent import enrich_fda_intelligence
-from api.models.ingestion import ExecutionPlanningInput, ExtractedSignal
+from api.legacy.agents.fda_agent import enrich_fda_intelligence
+from api.schemas.ingestion import ExecutionPlanningInput, ExtractedSignal
 
 
 # ─────────────────────────────────────────────

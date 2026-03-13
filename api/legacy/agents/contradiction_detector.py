@@ -23,7 +23,7 @@ from typing import Optional
 import anthropic
 import httpx
 
-from api.models.drug_program import (
+from api.legacy.models.drug_program import (
     DrugProgram, Contradiction, EpistemicGap,
 )
 

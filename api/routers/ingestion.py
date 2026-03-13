@@ -15,9 +15,9 @@ from typing import Optional
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Body
 
-from api.models.ingestion import IngestionResponse, ProgramState
-from api.services.ingestion_service import run_ingestion
-from api.data.demo_ingestion import get_demo_ingestion_response
+from api.schemas.ingestion import IngestionResponse, ProgramState
+from api.ingestion.service import run_ingestion
+from api.data.demo.demo_ingestion import get_demo_ingestion_response
 
 logger = logging.getLogger(__name__)
 

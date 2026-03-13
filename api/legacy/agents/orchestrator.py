@@ -52,7 +52,7 @@ async def run_pipeline(
       {"event": "complete",       "data": {full DrugProgram}}
       {"event": "error",          "data": {"message": "..."}}
     """
-    from ..models.drug_program import DrugProgram
+    from api.legacy.models.drug_program import DrugProgram
 
     program = DrugProgram()
 
@@ -61,10 +61,10 @@ async def run_pipeline(
         yield _phase("parse", "Parsing uploaded files deterministically")
 
         if use_demo:
-            from ..data.demo_program import build_antibiotic_demo_program
+            from api.data.demo_program import build_antibiotic_demo_program
             program = build_antibiotic_demo_program()
         else:
-            from ..parsers.universal_parser import build_drug_program_from_files
+            from api.legacy.parsers.universal_parser import build_drug_program_from_files
             program = build_drug_program_from_files(
                 vcf_path=vcf_path,
                 csv_paths=csv_paths or [],
@@ -80,7 +80,7 @@ async def run_pipeline(
 
         # ── Stage 2: Classify stage ─────────────────────────────────────
         yield _phase("classify", "Detecting program stage (T1–T8)")
-        from ..agents.stage_classifier import classify_program_stage
+        from api.legacy.agents.stage_classifier import classify_program_stage
         classify_program_stage(program)
         yield {"event": "stage", "data": {
             "label": program.stage_label,
@@ -93,35 +93,35 @@ async def run_pipeline(
 
         # ── Stage 3: Assumption Auditor ─────────────────────────────────
         yield _phase("audit", "Running Assumption Auditor")
-        from ..agents.assumption_auditor import run_assumption_auditor
+        from api.legacy.agents.assumption_auditor import run_assumption_auditor
         run_assumption_auditor(program)
         yield {"event": "audit_flags", "data": [f.model_dump() for f in program.audit_flags]}
         yield _last_trace(program)
 
         # ── Stage 4: Literature retrieval ───────────────────────────────
         yield _phase("lit", "Retrieving evidence literature")
-        from ..agents.literature_agent import retrieve_literature
+        from api.legacy.agents.literature_agent import retrieve_literature
         await retrieve_literature(program)
         yield {"event": "literature", "data": [p.model_dump() for p in program.literature]}
         yield _last_trace(program)
 
         # ── Stage 5: Contradiction Detector ────────────────────────────
         yield _phase("contra", "Detecting contradictions vs. literature")
-        from ..agents.contradiction_detector import run_contradiction_detector
+        from api.legacy.agents.contradiction_detector import run_contradiction_detector
         run_contradiction_detector(program)
         yield {"event": "contradictions", "data": [c.model_dump() for c in program.contradictions]}
         yield _last_trace(program)
 
         # ── Stage 6: Epistemic Gap Map ──────────────────────────────────
         yield _phase("gap", "Mapping knowledge frontier")
-        from ..agents.epistemic_gap_mapper import run_epistemic_gap_mapper
+        from api.legacy.agents.epistemic_gap_mapper import run_epistemic_gap_mapper
         run_epistemic_gap_mapper(program)
         yield {"event": "epistemic_gaps", "data": [g.model_dump() for g in program.epistemic_gaps]}
         yield _last_trace(program)
 
         # ── Stage 7: Translational Analysis ────────────────────────────
         yield _phase("translational", "Analyzing translational feasibility")
-        from ..agents.translational_agent import run_translational_agent
+        from api.legacy.agents.translational_agent import run_translational_agent
         run_translational_agent(program)
         yield {"event": "translational", "data": {
             "manufacturing": program.manufacturing.model_dump(),
@@ -138,7 +138,7 @@ async def run_pipeline(
 
         # ── Stage 8: Action Generator ───────────────────────────────────
         yield _phase("reason", "Generating evidence-linked action plan")
-        from ..agents.action_generator import generate_actions
+        from api.legacy.agents.action_generator import generate_actions
         generate_actions(program)
         yield {"event": "actions", "data": [a.model_dump() for a in program.ranked_actions]}
         yield {"event": "key_finding", "data": {

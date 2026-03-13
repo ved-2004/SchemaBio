@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from api.models.ingestion import (
+from api.schemas.ingestion import (
     IngestionResponse,
     ProgramState,
     ExperimentDesignInput,
@@ -23,7 +23,7 @@ from api.models.ingestion import (
     StageEstimate,
     EvidenceBundle,
 )
-from api.services.parser_adapter import (
+from api.ingestion.parser_adapter import (
     detect_file_type,
     parse_vcf_to_entities_signals,
     parse_resistance_csv_to_entities_signals,
@@ -31,7 +31,7 @@ from api.services.parser_adapter import (
     parse_pdf_to_entities_signals,
     parse_text_to_entities_signals,
 )
-from api.services.stage_estimator import estimate_stage
+from api.ingestion.stage_estimator import estimate_stage
 
 logger = logging.getLogger(__name__)
 

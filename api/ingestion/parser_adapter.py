@@ -12,9 +12,9 @@ from typing import Optional
 
 import pandas as pd
 
-from api.models.ingestion import ExtractedEntity, ExtractedSignal, UploadedFileDescriptor
-from api.parsers import vcf_parser, assay_parser, compound_parser, pdf_parser
-from api.parsers.universal_parser import _detect_csv_subtype
+from api.schemas.ingestion import ExtractedEntity, ExtractedSignal, UploadedFileDescriptor
+from api.ingestion.parsers import vcf_parser, assay_parser, compound_parser, pdf_parser
+from api.legacy.parsers.universal_parser import _detect_csv_subtype
 
 logger = logging.getLogger(__name__)
 

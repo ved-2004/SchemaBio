@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from api.models.ingestion import (
+from api.schemas.ingestion import (
     StageEstimate,
     UploadedFileDescriptor,
     ExtractedEntity,

@@ -26,7 +26,7 @@ from typing import Any, Optional
 import anthropic
 from dotenv import load_dotenv
 
-from api.layer2.models import (
+from api.schemas.layer2 import (
     BioinformaticsTask,
     ClarificationQuestion,
     ExperimentDesignOutput,
@@ -78,7 +78,7 @@ of bullet points. Preserve key mechanistic conclusions, confidence levels, and
 unresolved questions. Output plain text bullets only.
 """
 
-log = logging.getLogger("layer2.pipeline")
+log = logging.getLogger("experiment_design.pipeline")
 
 
 # ---------------------------------------------------------------------------

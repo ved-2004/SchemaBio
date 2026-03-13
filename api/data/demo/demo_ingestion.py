@@ -1,11 +1,11 @@
 """
-data/demo_ingestion.py
+data/demo/demo_ingestion.py
 
 Fully mocked antibiotic resistance demo IngestionResponse for GET /api/demo-ingestion.
 Matches the exact ingestion contract; no real parsing.
 """
 
-from api.models.ingestion import (
+from api.schemas.ingestion import (
     IngestionResponse,
     ProgramState,
     ExperimentDesignInput,

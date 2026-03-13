@@ -30,8 +30,8 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from api.models.ingestion import ExecutionPlanningInput
-from api.layer3.drug_to_market import run_layer3
+from api.schemas.ingestion import ExecutionPlanningInput
+from api.execution_planning.pipeline import run_layer3
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/execution-planning", tags=["execution-planning"])
