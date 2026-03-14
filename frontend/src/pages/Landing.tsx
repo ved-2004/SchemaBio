@@ -7,6 +7,8 @@ import {
   ArrowRight, Beaker, BookOpen, ChevronRight, Dna, FlaskConical,
   Import, Layers, Lightbulb, Rocket, Shield, Target, Zap,
 } from "lucide-react";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -34,6 +36,8 @@ const useCases = [
 ];
 
 export default function Landing() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
@@ -49,9 +53,13 @@ export default function Landing() {
             <Button variant="ghost" size="sm" className="text-xs" asChild>
               <Link to="/dashboard">View Demo</Link>
             </Button>
-            <Button size="sm" className="text-xs" asChild>
-              <Link to="/dashboard">Open Workspace <ArrowRight className="ml-1.5 h-3 w-3" /></Link>
-            </Button>
+            {user ? (
+              <Button size="sm" className="text-xs" asChild>
+                <Link to="/dashboard">Open Workspace <ArrowRight className="ml-1.5 h-3 w-3" /></Link>
+              </Button>
+            ) : (
+              <GoogleSignInButton />
+            )}
           </div>
         </div>
       </nav>

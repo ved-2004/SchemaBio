@@ -19,6 +19,13 @@ PyMuPDF==1.24.3           # PDF text extraction (fitz)
 # ── HTTP clients ──────────────────────────────────────────
 httpx==0.27.0             # Async HTTP + test client
 
+# ── Auth ──────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0   # JWT encode/decode
+
+# ── Cloud storage ──────────────────────────────────────────
+supabase==2.5.3                    # Supabase Python client (storage + DB)
+apscheduler==3.10.4                # Scheduled TTL cleanup job
+
 # ── Utilities ─────────────────────────────────────────────
 python-dotenv==1.0.1
 

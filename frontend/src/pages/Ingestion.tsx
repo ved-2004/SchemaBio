@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { UploadFileCard } from "@/components/schemabio/UploadFileCard";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Upload, Check, ArrowRight, Loader2, Beaker, Rocket } from "lucide-react";
 import { useIngestion } from "@/contexts/IngestionContext";
 import { fetchDemoIngestion, uploadAndParse } from "@/lib/ingestionApi";
+import { fetchUserUploads, daysUntilExpiry, type UploadRecord } from "@/lib/uploadsApi";
 import type { ProgramState, UploadedFileDescriptor } from "@/types/ingestion";
 
 function mapStatus(s: UploadedFileDescriptor["parse_status"]): "parsing" | "complete" | "error" {
@@ -25,6 +26,11 @@ export default function Ingestion() {
   const { ingestionResponse, setIngestionResponse, isLoadingLayer2, isLoadingLayer3 } = useIngestion();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadRecords, setUploadRecords] = useState<UploadRecord[]>([]);
+
+  useEffect(() => {
+    fetchUserUploads().then(setUploadRecords).catch(() => {});
+  }, [ingestionResponse]);
 
   const runPipeline = useCallback(async (data: Parameters<typeof setIngestionResponse>[0]) => {
     setLoading(true);
@@ -153,17 +159,27 @@ export default function Ingestion() {
           <div>
             <h3 className="text-sm font-semibold mb-3">Uploaded Files</h3>
             <div className="space-y-2">
-              {state.uploaded_files.map((f) => (
-                <UploadFileCard
-                  key={f.file_id || f.filename}
-                  fileName={f.filename}
-                  fileType={getFileExtension(f.filename)}
-                  status={mapStatus(f.parse_status)}
-                  confidence={f.schema_confidence}
-                  detectedType={f.detected_type}
-                  extractedFields={f.extracted_fields?.length ?? 0}
-                />
-              ))}
+              {state.uploaded_files.map((f) => {
+                const record = uploadRecords.find((r) => r.filename === f.filename);
+                const days = record ? daysUntilExpiry(record.expires_at) : null;
+                return (
+                  <div key={f.file_id || f.filename} className="relative">
+                    <UploadFileCard
+                      fileName={f.filename}
+                      fileType={getFileExtension(f.filename)}
+                      status={mapStatus(f.parse_status)}
+                      confidence={f.schema_confidence}
+                      detectedType={f.detected_type}
+                      extractedFields={f.extracted_fields?.length ?? 0}
+                    />
+                    {days !== null && (
+                      <span className="absolute bottom-1.5 right-3 text-[10px] text-muted-foreground/60">
+                        Expires in {days} day{days !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

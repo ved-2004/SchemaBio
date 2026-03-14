@@ -1,4 +1,4 @@
-import { Bell, Moon, Search, Sun, User } from "lucide-react";
+import { Bell, Moon, Search, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -12,7 +12,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useLocation } from "react-router-dom";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 const routeNames: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -75,9 +75,7 @@ export function TopNav() {
         <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
       </Button>
 
-      <Avatar className="h-8 w-8">
-        <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">SB</AvatarFallback>
-      </Avatar>
+      <UserMenu />
     </header>
   );
 }

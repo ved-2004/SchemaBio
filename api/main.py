@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -37,11 +38,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Start the daily cleanup scheduler on startup; stop it on shutdown."""
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from api.routers.uploads import cleanup_expired
+
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(cleanup_expired, "interval", hours=24, id="cleanup_expired_uploads")
+        scheduler.start()
+        logger.info("APScheduler started — expired-upload cleanup runs every 24 h.")
+        yield
+        scheduler.shutdown(wait=False)
+    except ImportError:
+        logger.warning("apscheduler not installed — skipping scheduled cleanup.")
+        yield
+
+
 app = FastAPI(
     title="SchemaBio — AI Drug Discovery OS",
     description="AI-driven scientific workflow platform for antibiotic resistance drug discovery and translational execution.",
     version="1.0.0",
+    lifespan=_lifespan,
 )
+
+# Auth — Google OAuth2 + JWT
+from api.routers import auth as auth_router
+app.include_router(auth_router.router)
+
+# Uploads — cloud storage metadata + TTL management
+from api.routers import uploads as uploads_router
+app.include_router(uploads_router.router)
 
 # SchemaBio ingestion layer (source of truth for program state)
 from api.routers import ingestion as ingestion_router
