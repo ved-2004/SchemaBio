@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Building2, CheckCircle2, Circle, DollarSign, Factory, Loader2, Shield, Users,
+  Building2, CheckCircle2, Circle, DollarSign, Factory, Loader2, Shield, Users, RefreshCw,
 } from "lucide-react";
 import { useIngestion } from "@/contexts/IngestionContext";
 
 export default function Execution() {
-  const { executionPlanningResponse, isLoadingLayer3, layer3Error } = useIngestion();
+  const { executionPlanningResponse, isLoadingLayer3, layer3Error, retryPipeline } = useIngestion();
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoadingLayer3) {
@@ -31,8 +31,11 @@ export default function Execution() {
           description="CRO recommendations, evidence checklist, funding opportunities, and translational readiness."
         />
         <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="p-4 text-sm text-destructive">
-            Layer 3 pipeline error: {layer3Error}
+          <CardContent className="p-4 flex items-center justify-between">
+            <span className="text-sm text-destructive">Layer 3 pipeline error: {layer3Error}</span>
+            <Button variant="outline" size="sm" className="text-xs ml-4 shrink-0" onClick={retryPipeline}>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+            </Button>
           </CardContent>
         </Card>
       </div>

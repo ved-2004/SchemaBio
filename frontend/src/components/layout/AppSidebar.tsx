@@ -42,7 +42,7 @@ const insightNav = [
 ];
 
 const systemNav = [
-  { title: "Settings", url: "/dashboard", icon: Settings },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -57,7 +57,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
-        <NavLink to="/dashboard" className="flex items-center gap-2.5 px-1">
+        <NavLink to="/" className="flex items-center gap-2.5 px-1">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Dna className="h-4 w-4 text-primary-foreground" />
           </div>
@@ -178,17 +178,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
-        {!collapsed && (
-          <div className="rounded-lg bg-secondary/50 p-3">
-            <p className="text-xs font-medium text-foreground">Demo Program</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">FQ Resistance Reversal</p>
-            <div className="mt-2 h-1.5 rounded-full bg-secondary">
-              <div className="h-full w-[65%] rounded-full bg-primary" />
-            </div>
-          </div>
-        )}
-      </SidebarFooter>
+      <SidebarFooter className="p-3" />
     </Sidebar>
   );
 }

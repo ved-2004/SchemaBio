@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lightbulb, FlaskConical, Microscope, Code, Loader2 } from "lucide-react";
+import { Lightbulb, FlaskConical, Microscope, Code, Loader2, RefreshCw } from "lucide-react";
 import { useIngestion } from "@/contexts/IngestionContext";
 
 const statusColors: Record<string, string> = {
@@ -14,7 +14,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Experiments() {
-  const { experimentDesignResponse, isLoadingLayer2, layer2Error } = useIngestion();
+  const { experimentDesignResponse, isLoadingLayer2, layer2Error, retryPipeline } = useIngestion();
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoadingLayer2) {
@@ -35,8 +35,11 @@ export default function Experiments() {
           description="Evidence-linked experimental recommendations ranked by confidence and urgency."
         />
         <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="p-4 text-sm text-destructive">
-            Layer 2 pipeline error: {layer2Error}
+          <CardContent className="p-4 flex items-center justify-between">
+            <span className="text-sm text-destructive">Layer 2 pipeline error: {layer2Error}</span>
+            <Button variant="outline" size="sm" className="text-xs ml-4 shrink-0" onClick={retryPipeline}>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -181,6 +181,7 @@ async def google_callback(
         httponly=True,
         samesite="lax",
         secure=FRONTEND_URL.startswith("https"),
+        path="/",
     )
     return dest
 
@@ -195,5 +196,5 @@ async def get_me(current_user: User = Depends(get_current_user)):
 async def logout():
     """Clear the JWT cookie."""
     resp = Response(content='{"status":"logged out"}', media_type="application/json")
-    resp.delete_cookie("access_token", samesite="lax")
+    resp.delete_cookie("access_token", path="/", samesite="lax")
     return resp

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { useNavigate } from "react-router-dom";
 
 function initials(name: string): string {
   return name
@@ -28,6 +29,12 @@ function initials(name: string): string {
  */
 export function UserMenu() {
   const { user, isLoading, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   if (isLoading) {
     return <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />;
@@ -60,7 +67,7 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-xs cursor-pointer text-destructive focus:text-destructive"
-          onClick={logout}
+          onClick={handleLogout}
         >
           <LogOut className="mr-2 h-3.5 w-3.5" />
           Sign out

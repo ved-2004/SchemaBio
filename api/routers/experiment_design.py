@@ -23,10 +23,13 @@ Response shape (matches Experiments.tsx data contracts):
 """
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from api.schemas.ingestion import ExperimentDesignInput, ProgramState
@@ -214,3 +217,48 @@ def _serialise(output: ExperimentDesignOutput) -> dict:
     """Serialise ExperimentDesignOutput to a plain dict for JSON transport."""
     import dataclasses
     return dataclasses.asdict(output)
+
+
+# ---------------------------------------------------------------------------
+# SSE streaming endpoint
+# ---------------------------------------------------------------------------
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
+
+
+@router.post("/run-stream")
+async def run_experiment_design_stream(req: ExperimentDesignRequest):
+    """
+    SSE streaming version of /run. Yields progress events during the pipeline,
+    then a final 'complete' event with the shaped response.
+    """
+    async def generate():
+        try:
+            yield _sse_event("progress", {"step": "rag_retrieval", "message": "Fetching RAG context from CARD, AlphaFold, IMGT..."})
+            rag_bundle = await ensure_indexed_and_query(req.program_state.model_dump(), top_k=6)
+            rag_docs = (
+                rag_bundle.get("card_documents", [])
+                + rag_bundle.get("alphafold_documents", [])
+                + rag_bundle.get("imgt_documents", [])
+            )
+            yield _sse_event("progress", {"step": "rag_complete", "message": f"Retrieved {len(rag_docs)} RAG documents."})
+
+            yield _sse_event("progress", {"step": "llm_reasoning", "message": "Running experiment design reasoning..."})
+            edi_dict = req.experiment_design_input.model_dump()
+            output = await _pipeline.run(edi_dict, rag_docs)
+            yield _sse_event("progress", {"step": "llm_complete", "message": f"Reasoning complete. Confidence: {output.overall_confidence:.0%}"})
+
+            yield _sse_event("progress", {"step": "shaping", "message": "Formatting response..."})
+            result = _shape_for_frontend(output, req.experiment_design_input)
+            yield _sse_event("complete", result)
+
+        except Exception as exc:
+            logger.exception("Layer 2 SSE stream failed: %s", exc)
+            yield _sse_event("error", {"message": str(exc)})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+    )

@@ -2,20 +2,16 @@
  * Shared state for all three pipeline layers.
  *
  * After ingestion completes (setIngestionResponse is called), the context
- * automatically triggers Layer 2 then Layer 3 in sequence:
+ * automatically triggers Layer 2 then Layer 3 in sequence.
  *
- *   Layer 1 (ingestion)  → IngestionResponse  → stored in ingestionResponse
- *   Layer 2 (LLM)        → ExperimentDesignResponse → stored in experimentDesignResponse
- *   Layer 3 (execution)  → ExecutionPlanningResponse → stored in executionPlanningResponse
- *
- * Experiments.tsx and Execution.tsx read from this context rather than making
- * their own API calls.
+ * retryPipeline() re-runs Layers 2 and 3 using the stored ingestionResponse.
  */
 import {
   createContext,
   useContext,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import type { IngestionResponse } from "@/types/ingestion";
@@ -26,20 +22,16 @@ import type {
 import { runExperimentDesign, runExecutionPlanning } from "@/lib/experimentApi";
 
 type IngestionContextValue = {
-  // Layer 1
   ingestionResponse:         IngestionResponse | null;
-  // Layer 2
   experimentDesignResponse:  ExperimentDesignResponse | null;
   isLoadingLayer2:           boolean;
   layer2Error:               string | null;
-  // Layer 3
   executionPlanningResponse: ExecutionPlanningResponse | null;
   isLoadingLayer3:           boolean;
   layer3Error:               string | null;
-  // True while any downstream layer is still running
   isPipelineRunning:         boolean;
-  // Setter — triggers the full sequential pipeline; returns a Promise
   setIngestionResponse: (data: IngestionResponse | null) => Promise<void>;
+  retryPipeline: () => Promise<void>;
 };
 
 const IngestionContext = createContext<IngestionContextValue | null>(null);
@@ -55,56 +47,67 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
 
   const isPipelineRunning = isLoadingLayer2 || isLoadingLayer3;
 
+  // Keep a ref so retryPipeline always sees the latest ingestionResponse
+  const ingestionRef = useRef<IngestionResponse | null>(null);
+
   /**
-   * Main entry point. Called by Ingestion.tsx after a successful upload or demo load.
-   * Stores the Layer 1 result, then sequentially triggers Layers 2 and 3.
-   * Returns a Promise that resolves only after all three layers complete.
+   * Runs Layers 2 and 3 sequentially for the given data.
    */
+  const runLayers2And3 = useCallback(async (data: IngestionResponse) => {
+    setLayer2Result(null);
+    setLayer3Result(null);
+    setLayer2Error(null);
+    setLayer3Error(null);
+
+    // Layer 2
+    setLoadingL2(true);
+    let l2Result: ExperimentDesignResponse | null = null;
+    try {
+      l2Result = await runExperimentDesign(
+        data.experiment_design_input,
+        data.program_state,
+      );
+      setLayer2Result(l2Result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLayer2Error(msg);
+      console.error("[Layer 2] Experiment design failed:", msg);
+    } finally {
+      setLoadingL2(false);
+    }
+
+    // Layer 3
+    setLoadingL3(true);
+    try {
+      const l3Result = await runExecutionPlanning(
+        data.execution_planning_input,
+        l2Result?._layer2_output as Record<string, unknown> | undefined,
+      );
+      setLayer3Result(l3Result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLayer3Error(msg);
+      console.error("[Layer 3] Execution planning failed:", msg);
+    } finally {
+      setLoadingL3(false);
+    }
+  }, []);
+
   const setIngestionResponse = useCallback(
     async (data: IngestionResponse | null): Promise<void> => {
       setRawIngestion(data);
-      setLayer2Result(null);
-      setLayer3Result(null);
-      setLayer2Error(null);
-      setLayer3Error(null);
-
+      ingestionRef.current = data;
       if (!data) return;
-
-      // ── Layer 2 ─────────────────────────────────────────────────────────
-      setLoadingL2(true);
-      let l2Result: ExperimentDesignResponse | null = null;
-      try {
-        l2Result = await runExperimentDesign(
-          data.experiment_design_input,
-          data.program_state,
-        );
-        setLayer2Result(l2Result);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setLayer2Error(msg);
-        console.error("[Layer 2] Experiment design failed:", msg);
-      } finally {
-        setLoadingL2(false);
-      }
-
-      // ── Layer 3 (runs after Layer 2 regardless of success) ──────────────
-      setLoadingL3(true);
-      try {
-        const l3Result = await runExecutionPlanning(
-          data.execution_planning_input,
-          l2Result?._layer2_output as Record<string, unknown> | undefined,
-        );
-        setLayer3Result(l3Result);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setLayer3Error(msg);
-        console.error("[Layer 3] Execution planning failed:", msg);
-      } finally {
-        setLoadingL3(false);
-      }
+      await runLayers2And3(data);
     },
-    [],
+    [runLayers2And3],
   );
+
+  const retryPipeline = useCallback(async () => {
+    const data = ingestionRef.current;
+    if (!data) return;
+    await runLayers2And3(data);
+  }, [runLayers2And3]);
 
   return (
     <IngestionContext.Provider
@@ -118,6 +121,7 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
         layer3Error,
         isPipelineRunning,
         setIngestionResponse,
+        retryPipeline,
       }}
     >
       {children}

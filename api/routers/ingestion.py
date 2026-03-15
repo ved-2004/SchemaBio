@@ -3,7 +3,6 @@ routers/ingestion.py
 
 SchemaBio ingestion API routes.
 - POST /api/upload-and-parse — upload files, run ingestion, return IngestionResponse
-- GET  /api/demo-ingestion  — return fully mocked demo IngestionResponse
 - POST /api/program-state   — optional: return program state from provided test input
 """
 
@@ -14,11 +13,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Body
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 
-from api.schemas.ingestion import IngestionResponse, ProgramState
+from api.schemas.ingestion import IngestionResponse
 from api.ingestion.service import run_ingestion
-from api.data.demo.demo_ingestion import get_demo_ingestion_response
 from api.models.user import User
 from api.models.upload import UserUpload
 from api.routers.auth import get_optional_user
@@ -99,6 +97,30 @@ async def upload_and_parse(
     """
     if not files:
         raise HTTPException(status_code=400, detail="At least one file is required")
+
+    # ── Input validation ────────────────────────────────────────────────────
+    MAX_FILE_SIZE = 50 * 1024 * 1024   # 50 MB
+    MAX_FILES = 20
+    ALLOWED_EXT = {".csv", ".tsv", ".vcf", ".bcf", ".pdf", ".txt", ".md"}
+
+    if len(files) > MAX_FILES:
+        raise HTTPException(status_code=400, detail=f"Too many files ({len(files)}). Max {MAX_FILES}.")
+
+    for f in files:
+        if not f.filename:
+            continue
+        ext = Path(f.filename).suffix.lower()
+        if ext not in ALLOWED_EXT:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: {ext}. Allowed: {', '.join(sorted(ALLOWED_EXT))}",
+            )
+        # Sanitize filename — strip path traversal characters
+        sanitized = Path(f.filename).name.replace("..", "").replace("/", "").replace("\\", "")
+        if not sanitized:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+        f.filename = sanitized
+
     paths: list[Path] = []
     file_sizes: dict[str, int] = {}
     tmp_dir = Path(tempfile.mkdtemp(prefix="schemabio_ingest_"))
@@ -106,8 +128,15 @@ async def upload_and_parse(
         for f in files:
             if not f.filename:
                 continue
-            path = tmp_dir / f.filename
             content = await f.read()
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {f.filename} exceeds {MAX_FILE_SIZE // (1024*1024)}MB limit",
+                )
+            if len(content) == 0:
+                continue  # skip empty files
+            path = tmp_dir / f.filename
             path.write_bytes(content)
             file_sizes[f.filename] = len(content)
             paths.append(path)
@@ -130,27 +159,3 @@ async def upload_and_parse(
             pass
 
 
-@router.get("/demo-ingestion", response_model=IngestionResponse)
-async def demo_ingestion() -> IngestionResponse:
-    """Return a fully mocked antibiotic resistance demo IngestionResponse."""
-    return get_demo_ingestion_response()
-
-
-@router.post("/program-state", response_model=ProgramState)
-async def program_state_from_input(
-    body: Optional[dict] = Body(None),
-) -> ProgramState:
-    """
-    Optional route: return normalized program state from provided test input.
-    If body is empty, returns demo program_state only.
-    """
-    demo = get_demo_ingestion_response()
-    if not body:
-        return demo.program_state
-    # Minimal merge: allow overriding program_id, status
-    state = demo.program_state.model_copy(deep=True)
-    if "program_id" in body:
-        state.program_id = str(body["program_id"])
-    if "status" in body:
-        state.status = str(body["status"])
-    return state

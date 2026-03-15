@@ -6,12 +6,6 @@ import { API_BASE_URL } from "./config";
 
 const API_BASE = `${API_BASE_URL}/api`;
 
-export async function fetchDemoIngestion(): Promise<IngestionResponse> {
-  const res = await fetch(`${API_BASE}/demo-ingestion`);
-  if (!res.ok) throw new Error(`Demo ingestion failed: ${res.status}`);
-  return res.json();
-}
-
 export async function uploadAndParse(files: File[]): Promise<IngestionResponse> {
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));

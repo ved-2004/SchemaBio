@@ -24,10 +24,12 @@ Response shape (matches Execution.tsx data contracts):
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from api.schemas.ingestion import ExecutionPlanningInput
@@ -206,3 +208,43 @@ def _pct(val: Any) -> float:
         return 0.0
     v = float(val)
     return v / 100.0 if v > 1.0 else v
+
+
+# ---------------------------------------------------------------------------
+# SSE streaming endpoint
+# ---------------------------------------------------------------------------
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
+
+
+@router.post("/run-stream")
+async def run_execution_planning_stream(req: ExecutionPlanningRequest):
+    """
+    SSE streaming version of /run. Yields progress events during the pipeline,
+    then a final 'complete' event with the shaped response.
+    """
+    async def generate():
+        try:
+            yield _sse_event("progress", {"step": "planning_start", "message": "Starting execution planning..."})
+
+            yield _sse_event("progress", {"step": "llm_reasoning", "message": "Running drug-to-market analysis..."})
+            raw = await run_layer3(
+                req.execution_planning_input,
+                layer2_output=req.experiment_design_output,
+            )
+            yield _sse_event("progress", {"step": "llm_complete", "message": "Analysis complete."})
+
+            yield _sse_event("progress", {"step": "shaping", "message": "Formatting execution brief..."})
+            result = _shape_for_frontend(raw, req.execution_planning_input, req.experiment_design_output)
+            yield _sse_event("complete", result)
+
+        except Exception as exc:
+            logger.exception("Layer 3 SSE stream failed: %s", exc)
+            yield _sse_event("error", {"message": str(exc)})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
+    )

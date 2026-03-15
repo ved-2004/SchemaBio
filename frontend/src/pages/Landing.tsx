@@ -50,9 +50,6 @@ export default function Landing() {
             <span className="font-semibold text-sm tracking-tight">SchemaBio</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-xs" asChild>
-              <Link to="/dashboard">View Demo</Link>
-            </Button>
             {user ? (
               <Button size="sm" className="text-xs" asChild>
                 <Link to="/dashboard">Open Workspace <ArrowRight className="ml-1.5 h-3 w-3" /></Link>
@@ -86,9 +83,6 @@ export default function Landing() {
           <motion.div custom={3} variants={fadeUp} className="flex items-center justify-center gap-3 mt-8">
             <Button size="lg" asChild>
               <Link to="/dashboard">Open Workspace <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link to="/dashboard">View Demo Program</Link>
             </Button>
           </motion.div>
         </motion.div>
@@ -247,14 +241,11 @@ export default function Landing() {
         <div className="container py-20 text-center">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Ready to accelerate your program?</h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-            Load a demo program or start with your own data. No setup required.
+            Upload your scientific data and get a structured development roadmap in minutes.
           </p>
           <div className="flex items-center justify-center gap-3 mt-6">
             <Button size="lg" asChild>
               <Link to="/dashboard">Open Workspace <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link to="/dashboard">View Demo Program</Link>
             </Button>
           </div>
         </div>

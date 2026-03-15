@@ -13,6 +13,7 @@ import Experiments from "./pages/Experiments";
 import Execution from "./pages/Execution";
 import Literature from "./pages/Literature";
 import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import AppLayout from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -36,6 +37,7 @@ const App = () => (
                   <Route path="/execution" element={<Execution />} />
                   <Route path="/literature" element={<Literature />} />
                   <Route path="/reports" element={<Reports />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

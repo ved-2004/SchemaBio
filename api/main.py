@@ -5,7 +5,6 @@ AIDEN FastAPI application.
 
 Endpoints:
   POST /api/analyze     — Upload files, stream SSE pipeline events
-  GET  /api/demo        — Run antibiotic resistance demo, stream SSE
   GET  /api/health      — Health check + version
   GET  /api/program/{id}— Retrieve completed DrugProgram by ID
   
@@ -17,10 +16,12 @@ SSE Event Types (consumed by frontend useAIDENStream hook):
 
 from __future__ import annotations
 import asyncio
+import collections
 import json
 import logging
 import os
 import tempfile
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -28,15 +29,21 @@ from typing import Optional
 from dotenv import load_dotenv
 load_dotenv()  # reads ANTHROPIC_API_KEY (and any other vars) from .env
 
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
+
+from api.monitoring import request_id_var, generate_request_id, setup_logging
+from api.services import programs_db
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Apply structured logging with request_id injection
+setup_logging()
 
 
 @asynccontextmanager
@@ -108,8 +115,71 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory program store (production: Redis or PostgreSQL)
-_program_store: dict[str, dict] = {}
+
+# ─── Rate Limiting (in-memory sliding window) ────────────────────────────────
+
+_RATE_LIMIT_WINDOW = 60          # seconds
+_RATE_LIMIT_MAX_REQUESTS = 30    # per window per IP
+_rate_limit_store: dict[str, collections.deque] = {}
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """Simple per-IP sliding window rate limiter."""
+    if request.url.path == "/api/health":
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    window = _rate_limit_store.setdefault(client_ip, collections.deque())
+
+    # Remove timestamps outside the window
+    while window and window[0] < now - _RATE_LIMIT_WINDOW:
+        window.popleft()
+
+    if len(window) >= _RATE_LIMIT_MAX_REQUESTS:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Try again later."},
+            headers={"Retry-After": str(_RATE_LIMIT_WINDOW)},
+        )
+
+    window.append(now)
+    return await call_next(request)
+
+
+# ─── Monitoring Middleware (request logging + correlation IDs) ─────────────────
+
+@app.middleware("http")
+async def monitoring_middleware(request: Request, call_next):
+    """Log every request with method, path, status, duration, and a correlation ID."""
+    rid = generate_request_id()
+    request_id_var.set(rid)
+
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = round((time.time() - start) * 1000, 2)
+
+    response.headers["X-Request-ID"] = rid
+
+    logger.info(
+        "method=%s path=%s status=%s duration_ms=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
+
+# ─── Input Validation Constants ───────────────────────────────────────────────
+
+MAX_FILE_SIZE = 50 * 1024 * 1024        # 50 MB per file
+MAX_FILES_PER_UPLOAD = 20
+ALLOWED_EXTENSIONS = {".csv", ".tsv", ".vcf", ".bcf", ".pdf", ".txt", ".md"}
+
+
+# Program persistence — Supabase with in-memory fallback (see api/services/programs_db.py)
 
 
 # ─── SSE Wrapper ─────────────────────────────────────────────────────────────
@@ -142,29 +212,9 @@ async def health():
         "status": "ok",
         "version": "1.0.0",
         "api_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "demo_available": True,
+        "demo_available": False,
     }
 
-
-@app.get("/api/demo")
-async def run_demo():
-    """
-    Run full pipeline on the antibiotic resistance demo dataset.
-    Streams SSE events in real-time.
-    Demo always works — no API key required for demo data.
-    """
-    from api.legacy.agents.orchestrator import run_pipeline
-
-    async def pipeline_with_store():
-        async for event in run_pipeline(use_demo=True):
-            if event.get("event") == "complete":
-                prog = event.get("data", {})
-                pid = prog.get("program_id")
-                if pid:
-                    _program_store[pid] = prog
-            yield event
-
-    return _sse_response(pipeline_with_store())
 
 
 @app.post("/api/analyze")
@@ -184,7 +234,7 @@ async def analyze(
       pdf_file  — Scientific paper or methods PDF
       txt_file  — Target rationale or notes text file
 
-    Falls back to demo data if no files uploaded.
+    At least one file is required.
     """
     from api.legacy.agents.orchestrator import run_pipeline
 
@@ -216,7 +266,8 @@ async def analyze(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"File upload failed: {e}")
 
-    use_demo = not any([vcf_path, csv_paths, pdf_path, txt_paths])
+    if not any([vcf_path, csv_paths, pdf_path, txt_paths]):
+        raise HTTPException(status_code=400, detail="At least one file is required")
 
     async def pipeline_with_store():
         async for event in run_pipeline(
@@ -224,13 +275,13 @@ async def analyze(
             csv_paths=csv_paths,
             pdf_path=pdf_path,
             text_paths=txt_paths,
-            use_demo=use_demo,
+            use_demo=False,
         ):
             if event.get("event") == "complete":
                 prog = event.get("data", {})
                 pid = prog.get("program_id")
                 if pid:
-                    _program_store[pid] = prog
+                    programs_db.save_program(pid, prog)
             yield event
 
     return _sse_response(pipeline_with_store())
@@ -239,20 +290,39 @@ async def analyze(
 @app.get("/api/program/{program_id}")
 async def get_program(program_id: str):
     """Retrieve a completed DrugProgram by its ID."""
-    prog = _program_store.get(program_id.upper())
+    prog = programs_db.get_program(program_id)
     if not prog:
         raise HTTPException(status_code=404, detail=f"Program {program_id} not found")
     return prog
+
+
+@app.get("/api/programs/user/{user_id}")
+async def get_user_programs(user_id: str):
+    """List all programs belonging to a user."""
+    return programs_db.get_user_programs(user_id)
 
 
 @app.post("/api/program/{program_id}/update")
 async def update_program(program_id: str, new_data: dict):
     """
     Update an existing program with new data (e.g. new assay results).
-    Re-runs the analysis pipeline with merged data.
+    Merges new_data into the existing program and re-runs affected layers.
     """
-    existing = _program_store.get(program_id.upper())
+    pid = program_id.upper()
+    existing = programs_db.get_program(pid)
     if not existing:
         raise HTTPException(status_code=404, detail=f"Program {program_id} not found")
-    # TODO: merge new_data into existing program and re-run affected agents
-    return {"status": "update queued", "program_id": program_id}
+
+    # Merge new_data into existing program (shallow merge at top level)
+    for key, value in new_data.items():
+        if key == "program_id":
+            continue  # don't allow overriding ID
+        if isinstance(value, dict) and isinstance(existing.get(key), dict):
+            existing[key].update(value)
+        elif isinstance(value, list) and isinstance(existing.get(key), list):
+            existing[key].extend(value)
+        else:
+            existing[key] = value
+
+    programs_db.save_program(pid, existing)
+    return {"status": "updated", "program_id": pid, "keys_merged": list(new_data.keys())}

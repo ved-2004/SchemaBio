@@ -21,6 +21,7 @@ const routeNames: Record<string, string> = {
   "/execution": "Execution",
   "/literature": "Literature",
   "/reports": "Reports",
+  "/settings": "Settings",
 };
 
 export function TopNav() {
@@ -36,7 +37,7 @@ export function TopNav() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard" className="text-xs text-muted-foreground">
+            <BreadcrumbLink href="/" className="text-xs text-muted-foreground">
               SchemaBio
             </BreadcrumbLink>
           </BreadcrumbItem>

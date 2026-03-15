@@ -243,9 +243,17 @@ class ExperimentDesignPipeline:
             model=self.reasoning_model,
             max_tokens=max_tokens,
             system=EXPERIMENT_DESIGN_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+            messages=[
+                {"role": "user", "content": user_message},
+                # Response prefilling: force the model to start with '{' for JSON
+                {"role": "assistant", "content": "{"},
+            ],
         )
-        return _extract_text_block(response)
+        text = _extract_text_block(response)
+        # Prepend the '{' we used for prefilling
+        if text and not text.startswith("{"):
+            text = "{" + text
+        return text
 
     async def _call_formatting_llm(self, raw_opus_output: str) -> str:
         """Haiku fallback: convert malformed Opus output → clean JSON."""
@@ -291,20 +299,33 @@ class ExperimentDesignPipeline:
     async def _parse_output(self, raw: str) -> ExperimentDesignOutput:
         json_str = _extract_json(raw)
         if not json_str:
-            log.warning("No JSON found in Opus output — running Haiku fallback")
-            try:
-                json_str = await self._call_formatting_llm(raw)
-            except Exception as exc:
-                log.error(f"Haiku fallback failed: {exc}")
-                return _error_output(str(exc))
+            log.warning("No JSON found — running formatting fallback")
+            json_str = await self._haiku_fix(raw)
+            if not json_str:
+                return _error_output("No JSON extractable from LLM output")
 
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as exc:
-            log.error(f"JSON parse error: {exc}")
-            return _error_output(str(exc))
+            log.warning(f"JSON parse error: {exc} — running formatting fallback")
+            json_str = await self._haiku_fix(raw)
+            if not json_str:
+                return _error_output(str(exc))
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError as exc2:
+                log.error(f"Formatting fallback also failed: {exc2}")
+                return _error_output(str(exc2))
 
         return _build_output(data)
+
+    async def _haiku_fix(self, raw: str) -> str:
+        try:
+            result = await self._call_formatting_llm(raw)
+            return _repair_json(result) if result else ""
+        except Exception as exc:
+            log.error(f"Formatting fallback failed: {exc}")
+            return ""
 
     def _is_converged(self, output: ExperimentDesignOutput) -> bool:
         return (
@@ -377,19 +398,51 @@ def _build_user_message(
 
     parts.append(
         "\nBased on the above, design the next experiments. "
-        "Respond only with valid JSON matching the specified schema."
+        "CRITICAL: Respond with ONLY a valid JSON object. No markdown fences, no comments, no trailing commas. "
+        "Every string value must be properly escaped. The response must parse with json.loads()."
     )
     return "\n".join(parts)
 
 
+def _repair_json(text: str) -> str:
+    """
+    Attempt to repair common LLM JSON issues:
+    - Trailing commas before } or ]
+    - Single-line // comments
+    - Python-style # comments
+    - Unescaped newlines in strings
+    - Missing closing braces
+    """
+    # Remove single-line comments (// and #)
+    text = re.sub(r'//[^\n]*', '', text)
+    text = re.sub(r'(?<!["\w])#[^\n]*', '', text)
+
+    # Remove trailing commas before } or ]
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    # Balance braces — append missing closing braces
+    opens = text.count('{') - text.count('}')
+    if opens > 0:
+        text += '}' * opens
+    brackets = text.count('[') - text.count(']')
+    if brackets > 0:
+        text += ']' * brackets
+
+    return text.strip()
+
+
 def _extract_json(text: str) -> Optional[str]:
-    """Extract first ```json...``` fence, or fall back to bare {…}."""
+    """Extract first ```json...``` fence, or fall back to bare {…}, with auto-repair."""
     m = re.search(r"```json\s*([\s\S]*?)```", text)
     if m:
-        return m.group(1).strip()
+        return _repair_json(m.group(1).strip())
     m = re.search(r"(\{[\s\S]*\})", text)
     if m:
-        return m.group(1).strip()
+        return _repair_json(m.group(1).strip())
+    # If text starts with { (from prefilling), treat entire text as JSON
+    text = text.strip()
+    if text.startswith("{"):
+        return _repair_json(text)
     return None
 
 

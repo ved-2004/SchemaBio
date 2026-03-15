@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, Check, ArrowRight, Loader2, Beaker, Rocket } from "lucide-react";
 import { useIngestion } from "@/contexts/IngestionContext";
-import { fetchDemoIngestion, uploadAndParse } from "@/lib/ingestionApi";
+import { uploadAndParse } from "@/lib/ingestionApi";
 import { fetchUserUploads, daysUntilExpiry, type UploadRecord } from "@/lib/uploadsApi";
 import type { ProgramState, UploadedFileDescriptor } from "@/types/ingestion";
 
@@ -43,15 +43,6 @@ export default function Ingestion() {
       setLoading(false);
     }
   }, [setIngestionResponse]);
-
-  const loadDemoFromApi = useCallback(async () => {
-    try {
-      const data = await fetchDemoIngestion();
-      await runPipeline(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load demo");
-    }
-  }, [runPipeline]);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,7 +118,7 @@ export default function Ingestion() {
 
       {error && (
         <div className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-          {error} — load mock demo below to see the pipeline with sample data.
+          {error}
         </div>
       )}
 
@@ -146,9 +137,6 @@ export default function Ingestion() {
                 <span>Upload & parse</span>
               </Button>
             </label>
-            <Button variant="outline" size="sm" className="text-xs" onClick={loadDemoFromApi} disabled={loading}>
-              Load demo
-            </Button>
           </div>
         </CardContent>
       </Card>
