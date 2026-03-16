@@ -22,6 +22,7 @@ from api.models.upload import UserUpload
 from api.routers.auth import get_current_user, get_optional_user
 import api.services.storage as storage
 import api.services.runs_db as runs_db
+import api.services.programs_db as programs_db
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,15 @@ async def upload_and_parse(
             raise HTTPException(status_code=400, detail="No valid files to process")
         response = run_ingestion(paths)
         program_id = response.program_state.program_id
+
+        # Save program row FIRST so user_uploads and experiment_runs can reference it
+        # via program_id without a FK violation. Uses upsert so re-uploads are safe.
+        programs_db.save_program(
+            program_id,
+            response.model_dump(),
+            user_id=current_user.id,
+        )
+
         upload_ids = await _store_uploaded_files(program_id, paths, file_sizes, current_user) or []
 
         run_id = runs_db.create_run(
