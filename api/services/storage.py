@@ -34,8 +34,6 @@ from api.models.upload import UserUpload
 
 logger = logging.getLogger(__name__)
 
-_SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-_SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 _BUCKET = os.environ.get("SUPABASE_BUCKET", "schemabio-uploads")
 _UPLOAD_TTL_DAYS = int(os.environ.get("UPLOAD_TTL_DAYS", "30"))
 
@@ -44,18 +42,20 @@ _TABLE = "user_uploads"
 
 def _client():
     """Return a Supabase client, or None if not configured."""
-    if not (_SUPABASE_URL and _SUPABASE_SERVICE_KEY):
+    url = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not (url and key):
         return None
     try:
         from supabase import create_client
-        return create_client(_SUPABASE_URL, _SUPABASE_SERVICE_KEY)
+        return create_client(url, key)
     except Exception as exc:
         logger.warning("Supabase client init failed: %s", exc)
         return None
 
 
 def is_configured() -> bool:
-    return bool(_SUPABASE_URL and _SUPABASE_SERVICE_KEY)
+    return bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"))
 
 
 # ── File storage ──────────────────────────────────────────────────────────────

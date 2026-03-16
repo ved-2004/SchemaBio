@@ -19,7 +19,7 @@ from api.schemas.ingestion import IngestionResponse
 from api.ingestion.service import run_ingestion
 from api.models.user import User
 from api.models.upload import UserUpload
-from api.routers.auth import get_optional_user
+from api.routers.auth import get_current_user, get_optional_user
 import api.services.storage as storage
 import api.services.runs_db as runs_db
 
@@ -54,11 +54,23 @@ async def _store_uploaded_files(
     Upload each file to Supabase Storage and save metadata to the DB.
     Falls back to local disk if Supabase is not configured.
     """
-    if not storage.is_configured() or user_id is None:
-        # No Supabase or anonymous user — fall back to local disk only, skip DB metadata
+    user_id = user.id if user else None
+    logger.info(
+        "_store_uploaded_files: storage.is_configured()=%s user_id=%s paths=%s",
+        storage.is_configured(),
+        user_id,
+        [str(p) for p in paths],
+    )
+    if not storage.is_configured():
+        # Supabase not configured — development fallback to local disk
+        logger.warning("Supabase not configured — writing files to local disk instead")
         for p in paths:
             _persist_local(program_id, p)
-        return
+        return []
+    if user_id is None:
+        # Should not happen now that the endpoint requires auth, but guard just in case
+        logger.error("_store_uploaded_files called with no authenticated user — skipping storage")
+        return []
 
     upload_id = program_id  # reuse program_id as the upload session identifier
     expires_at = storage.make_expires_at()
@@ -94,7 +106,7 @@ async def _store_uploaded_files(
 @router.post("/upload-and-parse", response_model=IngestionResponse)
 async def upload_and_parse(
     files: list[UploadFile] = File(...),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ) -> IngestionResponse:
     """
     Accept uploaded files, run the ingestion pipeline, return IngestionResponse.
@@ -152,15 +164,12 @@ async def upload_and_parse(
         program_id = response.program_state.program_id
         upload_ids = await _store_uploaded_files(program_id, paths, file_sizes, current_user) or []
 
-        # Create an experiment_run row for authenticated users so Layer 2/3 results
-        # can be linked and the user can view their run history.
-        if current_user is not None:
-            run_id = runs_db.create_run(
-                user_id=current_user.id,
-                program_id=program_id,
-                upload_ids=upload_ids,
-            )
-            response.run_id = run_id
+        run_id = runs_db.create_run(
+            user_id=current_user.id,
+            program_id=program_id,
+            upload_ids=upload_ids,
+        )
+        response.run_id = run_id
 
         return response
     finally:
