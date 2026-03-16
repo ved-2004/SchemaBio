@@ -12,6 +12,7 @@ export async function uploadAndParse(files: File[]): Promise<IngestionResponse> 
   const res = await fetch(`${API_BASE}/upload-and-parse`, {
     method: "POST",
     body: formData,
+    credentials: "include",
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
