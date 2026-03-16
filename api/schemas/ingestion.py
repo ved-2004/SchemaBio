@@ -122,3 +122,6 @@ class IngestionResponse(BaseModel):
     program_state: ProgramState = Field(default_factory=ProgramState)
     experiment_design_input: ExperimentDesignInput = Field(default_factory=ExperimentDesignInput)
     execution_planning_input: ExecutionPlanningInput = Field(default_factory=ExecutionPlanningInput)
+    # Set server-side after DB write; None when Supabase is not configured or user is anonymous.
+    # Frontend can store this and pass it back to Layer 2 / Layer 3 requests to link results.
+    run_id: Optional[str] = None

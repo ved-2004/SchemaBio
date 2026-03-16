@@ -95,6 +95,10 @@ app.include_router(experiment_design_router.router)
 from api.routers import execution_planning as execution_planning_router
 app.include_router(execution_planning_router.router)
 
+# Run history — experiment_runs per user
+from api.routers import runs as runs_router
+app.include_router(runs_router.router)
+
 _CORS_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",

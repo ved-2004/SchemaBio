@@ -21,6 +21,7 @@ from api.models.user import User
 from api.models.upload import UserUpload
 from api.routers.auth import get_optional_user
 import api.services.storage as storage
+import api.services.runs_db as runs_db
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +49,22 @@ async def _store_uploaded_files(
     paths: list[Path],
     file_sizes: dict[str, int],
     user: Optional[User],
-) -> None:
+) -> list[str]:
     """
     Upload each file to Supabase Storage and save metadata to the DB.
     Falls back to local disk if Supabase is not configured.
     """
-    if not storage.is_configured():
+    if not storage.is_configured() or user_id is None:
+        # No Supabase or anonymous user — fall back to local disk only, skip DB metadata
         for p in paths:
             _persist_local(program_id, p)
         return
 
-    user_id = user.id if user else "anonymous"
     upload_id = program_id  # reuse program_id as the upload session identifier
     expires_at = storage.make_expires_at()
     now = datetime.now(timezone.utc)
 
+    saved_upload_ids: list[str] = []
     for path in paths:
         if not path.exists():
             continue
@@ -72,8 +74,9 @@ async def _store_uploaded_files(
             _persist_local(program_id, path)
             continue
 
+        uid = f"{upload_id}_{path.stem}"
         upload = UserUpload(
-            upload_id=f"{upload_id}_{path.stem}",
+            upload_id=uid,
             user_id=user_id,
             filename=path.name,
             file_size_bytes=file_sizes.get(path.name, len(content)),
@@ -83,6 +86,9 @@ async def _store_uploaded_files(
             expires_at=expires_at,
         )
         storage.save_upload_metadata(upload)
+        saved_upload_ids.append(uid)
+
+    return saved_upload_ids
 
 
 @router.post("/upload-and-parse", response_model=IngestionResponse)
@@ -143,9 +149,19 @@ async def upload_and_parse(
         if not paths:
             raise HTTPException(status_code=400, detail="No valid files to process")
         response = run_ingestion(paths)
-        await _store_uploaded_files(
-            response.program_state.program_id, paths, file_sizes, current_user
-        )
+        program_id = response.program_state.program_id
+        upload_ids = await _store_uploaded_files(program_id, paths, file_sizes, current_user) or []
+
+        # Create an experiment_run row for authenticated users so Layer 2/3 results
+        # can be linked and the user can view their run history.
+        if current_user is not None:
+            run_id = runs_db.create_run(
+                user_id=current_user.id,
+                program_id=program_id,
+                upload_ids=upload_ids,
+            )
+            response.run_id = run_id
+
         return response
     finally:
         for p in paths:

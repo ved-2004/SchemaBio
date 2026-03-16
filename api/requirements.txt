@@ -24,6 +24,7 @@ python-jose[cryptography]==3.3.0   # JWT encode/decode
 
 # ── Cloud storage ──────────────────────────────────────────
 supabase==2.5.3                    # Supabase Python client (storage + DB)
+psycopg2-binary==2.9.9             # Direct Postgres connection for migration runner
 apscheduler==3.10.4                # Scheduled TTL cleanup job
 
 # ── Utilities ─────────────────────────────────────────────

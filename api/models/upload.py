@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 class UserUpload(BaseModel):
     upload_id: str
-    user_id: str
+    user_id: Optional[str] = None  # null for anonymous uploads (no FK target in users table)
     filename: str
     file_size_bytes: int
     bucket_path: str

@@ -34,6 +34,7 @@ from pydantic import BaseModel
 
 from api.schemas.ingestion import ExecutionPlanningInput
 from api.execution_planning.pipeline import run_layer3
+import api.services.runs_db as runs_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/execution-planning", tags=["execution-planning"])
@@ -47,6 +48,10 @@ class ExecutionPlanningRequest(BaseModel):
     execution_planning_input: ExecutionPlanningInput
     # Layer 2 output dict (from _layer2_output field in experiment-design response)
     experiment_design_output: Optional[dict[str, Any]] = None
+    # Optional — when present, Layer 3 results are persisted to execution_plans
+    run_id:     Optional[str] = None
+    user_id:    Optional[str] = None
+    program_id: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +72,17 @@ async def run_execution_planning(req: ExecutionPlanningRequest) -> dict:
             req.execution_planning_input,
             layer2_output=req.experiment_design_output,
         )
-        return _shape_for_frontend(raw, req.execution_planning_input, req.experiment_design_output)
+        result = _shape_for_frontend(raw, req.execution_planning_input, req.experiment_design_output)
+
+        if req.run_id and req.user_id and req.program_id:
+            runs_db.save_execution_plan(
+                run_id=req.run_id,
+                user_id=req.user_id,
+                program_id=req.program_id,
+                data=result,
+            )
+
+        return result
     except Exception as exc:
         logger.exception("Layer 3 execution planning failed: %s", exc)
         raise HTTPException(status_code=500, detail=f"Execution planning failed: {exc}")
@@ -237,6 +252,15 @@ async def run_execution_planning_stream(req: ExecutionPlanningRequest):
 
             yield _sse_event("progress", {"step": "shaping", "message": "Formatting execution brief..."})
             result = _shape_for_frontend(raw, req.execution_planning_input, req.experiment_design_output)
+
+            if req.run_id and req.user_id and req.program_id:
+                runs_db.save_execution_plan(
+                    run_id=req.run_id,
+                    user_id=req.user_id,
+                    program_id=req.program_id,
+                    data=result,
+                )
+
             yield _sse_event("complete", result)
 
         except Exception as exc:

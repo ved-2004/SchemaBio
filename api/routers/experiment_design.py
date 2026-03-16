@@ -36,6 +36,7 @@ from api.schemas.ingestion import ExperimentDesignInput, ProgramState
 from api.rag.service import ensure_indexed_and_query
 from api.experiment_design.pipeline import ExperimentDesignPipeline
 from api.schemas.layer2 import ExperimentDesignOutput, RankedExperiment
+import api.services.runs_db as runs_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/experiment-design", tags=["experiment-design"])
@@ -50,6 +51,10 @@ _pipeline = ExperimentDesignPipeline()   # singleton — reuses cached prompts
 class ExperimentDesignRequest(BaseModel):
     experiment_design_input: ExperimentDesignInput
     program_state: ProgramState   # passed through for RAG query generation
+    # Optional — returned by /api/upload-and-parse. When present, Layer 2 results
+    # are persisted to experiment_results so the user can retrieve them later.
+    run_id: Optional[str] = None
+    user_id: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +84,19 @@ async def run_experiment_design(req: ExperimentDesignRequest) -> dict:
         output   = await _pipeline.run(edi_dict, rag_docs)
 
         # Step 3 — Shape response for frontend
-        return _shape_for_frontend(output, req.experiment_design_input)
+        result = _shape_for_frontend(output, req.experiment_design_input)
+
+        # Step 4 — Persist to DB if run_id was supplied
+        if req.run_id and req.user_id:
+            program_id = req.program_state.program_id or ""
+            runs_db.save_experiment_result(
+                run_id=req.run_id,
+                user_id=req.user_id,
+                program_id=program_id,
+                data=result,
+            )
+
+        return result
 
     except Exception as exc:
         logger.exception("Layer 2 experiment design failed: %s", exc)
@@ -251,6 +268,16 @@ async def run_experiment_design_stream(req: ExperimentDesignRequest):
 
             yield _sse_event("progress", {"step": "shaping", "message": "Formatting response..."})
             result = _shape_for_frontend(output, req.experiment_design_input)
+
+            if req.run_id and req.user_id:
+                program_id = req.program_state.program_id or ""
+                runs_db.save_experiment_result(
+                    run_id=req.run_id,
+                    user_id=req.user_id,
+                    program_id=program_id,
+                    data=result,
+                )
+
             yield _sse_event("complete", result)
 
         except Exception as exc:
