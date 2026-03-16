@@ -12,11 +12,19 @@ import { API_BASE_URL } from "./config";
 export async function runExperimentDesign(
   experiment_design_input: ExperimentDesignInput,
   program_state: ProgramState,
+  run_id: string | null,
+  user_id: string | null,
 ): Promise<ExperimentDesignResponse> {
   const res = await fetch(`${API_BASE_URL}/api/experiment-design/run`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ experiment_design_input, program_state }),
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      experiment_design_input,
+      program_state,
+      run_id:  run_id  ?? undefined,
+      user_id: user_id ?? undefined,
+    }),
   });
 
   if (!res.ok) {
@@ -30,14 +38,21 @@ export async function runExperimentDesign(
 
 export async function runExecutionPlanning(
   execution_planning_input: unknown,
-  experiment_design_output?: Record<string, unknown>,
+  experiment_design_output: Record<string, unknown> | null | undefined,
+  run_id: string | null,
+  user_id: string | null,
+  program_id: string | null,
 ): Promise<ExecutionPlanningResponse> {
   const res = await fetch(`${API_BASE_URL}/api/execution-planning/run`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({
+    method:      "POST",
+    headers:     { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
       execution_planning_input,
       experiment_design_output: experiment_design_output ?? null,
+      run_id:     run_id     ?? undefined,
+      user_id:    user_id    ?? undefined,
+      program_id: program_id ?? undefined,
     }),
   });
 

@@ -87,13 +87,24 @@ async def run_experiment_design(req: ExperimentDesignRequest) -> dict:
         result = _shape_for_frontend(output, req.experiment_design_input)
 
         # Step 4 — Persist to DB if run_id was supplied
+        logger.info(
+            "Layer 2 save check: run_id=%r user_id=%r program_id=%r",
+            req.run_id, req.user_id, req.program_state.program_id,
+        )
         if req.run_id and req.user_id:
             program_id = req.program_state.program_id or ""
+            logger.info("Layer 2 saving result for run_id=%s", req.run_id)
             runs_db.save_experiment_result(
                 run_id=req.run_id,
                 user_id=req.user_id,
                 program_id=program_id,
                 data=result,
+            )
+            logger.info("Layer 2 save complete for run_id=%s", req.run_id)
+        else:
+            logger.warning(
+                "Layer 2 result NOT saved — run_id or user_id missing (run_id=%r, user_id=%r)",
+                req.run_id, req.user_id,
             )
 
         return result

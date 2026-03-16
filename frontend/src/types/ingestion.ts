@@ -100,4 +100,5 @@ export interface IngestionResponse {
   program_state: ProgramState;
   experiment_design_input: ExperimentDesignInput;
   execution_planning_input: ExecutionPlanningInput;
+  run_id: string | null;
 }

@@ -20,6 +20,7 @@ import type {
   ExecutionPlanningResponse,
 } from "@/types/layer2";
 import { runExperimentDesign, runExecutionPlanning } from "@/lib/experimentApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 type IngestionContextValue = {
   ingestionResponse:         IngestionResponse | null;
@@ -37,6 +38,7 @@ type IngestionContextValue = {
 const IngestionContext = createContext<IngestionContextValue | null>(null);
 
 export function IngestionProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [ingestionResponse,         setRawIngestion]   = useState<IngestionResponse | null>(null);
   const [experimentDesignResponse,  setLayer2Result]   = useState<ExperimentDesignResponse | null>(null);
   const [executionPlanningResponse, setLayer3Result]   = useState<ExecutionPlanningResponse | null>(null);
@@ -59,6 +61,10 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
     setLayer2Error(null);
     setLayer3Error(null);
 
+    const run_id     = data.run_id ?? null;
+    const user_id    = user?.id    ?? null;
+    const program_id = data.program_state.program_id ?? null;
+
     // Layer 2
     setLoadingL2(true);
     let l2Result: ExperimentDesignResponse | null = null;
@@ -66,6 +72,8 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
       l2Result = await runExperimentDesign(
         data.experiment_design_input,
         data.program_state,
+        run_id,
+        user_id,
       );
       setLayer2Result(l2Result);
     } catch (err) {
@@ -82,6 +90,9 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
       const l3Result = await runExecutionPlanning(
         data.execution_planning_input,
         l2Result?._layer2_output as Record<string, unknown> | undefined,
+        run_id,
+        user_id,
+        program_id,
       );
       setLayer3Result(l3Result);
     } catch (err) {
@@ -91,7 +102,7 @@ export function IngestionProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingL3(false);
     }
-  }, []);
+  }, [user]);
 
   const setIngestionResponse = useCallback(
     async (data: IngestionResponse | null): Promise<void> => {

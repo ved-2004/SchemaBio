@@ -74,12 +74,24 @@ async def run_execution_planning(req: ExecutionPlanningRequest) -> dict:
         )
         result = _shape_for_frontend(raw, req.execution_planning_input, req.experiment_design_output)
 
+        logger.info(
+            "Layer 3 save check: run_id=%r user_id=%r program_id=%r",
+            req.run_id, req.user_id, req.program_id,
+        )
         if req.run_id and req.user_id and req.program_id:
+            logger.info("Layer 3 saving result for run_id=%s", req.run_id)
             runs_db.save_execution_plan(
                 run_id=req.run_id,
                 user_id=req.user_id,
                 program_id=req.program_id,
                 data=result,
+            )
+            logger.info("Layer 3 save complete for run_id=%s", req.run_id)
+        else:
+            logger.warning(
+                "Layer 3 result NOT saved — run_id, user_id, or program_id missing "
+                "(run_id=%r, user_id=%r, program_id=%r)",
+                req.run_id, req.user_id, req.program_id,
             )
 
         return result
