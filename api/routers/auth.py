@@ -122,7 +122,14 @@ async def google_login():
     auth_url = f"{_GOOGLE_AUTH_URL}?{urllib.parse.urlencode(params)}"
     resp = RedirectResponse(url=auth_url)
     # Short-lived CSRF state cookie
-    resp.set_cookie("oauth_state", state, max_age=300, httponly=True, samesite="lax")
+    resp.set_cookie(
+        "oauth_state",
+        state,
+        max_age=300,
+        httponly=True,
+        samesite="lax",
+        secure=BACKEND_URL.startswith("https"),
+    )
     return resp
 
 
