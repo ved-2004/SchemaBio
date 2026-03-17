@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./config";
+import { authHeaders } from "@/contexts/AuthContext";
 
 export interface UploadRecord {
   upload_id: string;
@@ -13,7 +14,7 @@ export interface UploadRecord {
 }
 
 export async function fetchUserUploads(): Promise<UploadRecord[]> {
-  const res = await fetch(`${API_BASE_URL}/uploads`, { credentials: "include" });
+  const res = await fetch(`${API_BASE_URL}/uploads`, { headers: authHeaders() });
   if (res.status === 401) return []; // not logged in — silently empty
   if (!res.ok) throw new Error(`Failed to fetch uploads: ${res.status}`);
   return res.json();
