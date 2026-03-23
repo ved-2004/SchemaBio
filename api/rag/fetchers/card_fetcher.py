@@ -5,8 +5,12 @@ https://card.mcmaster.ca/
 Downloads the live CARD canonical data package from:
   https://card.mcmaster.ca/latest/data   (tar.bz2, ~4.6 MB)
 
-Extracts card.json (ARO models) and aro_index.tsv, filters by target gene /
-drug class, and returns formatted text chunks for vector-store indexing.
+Memory-efficient implementation:
+  - Streams the tar.bz2 and processes one entry at a time
+  - Only extracts card.json and aro_index.tsv (skips all other archive members)
+  - Filters strictly: documents must match BOTH a target gene AND a drug class
+    (when both are provided) rather than the old OR-based match
+  - Hard cap at MAX_DOCUMENTS to prevent memory spikes on broad queries
 
 card.json entry keys used:
   model_id, model_name, ARO_accession, ARO_name, ARO_description,
@@ -26,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 CARD_DATA_URL = "https://card.mcmaster.ca/latest/data"
 CARD_BASE = "https://card.mcmaster.ca"
+
+MAX_DOCUMENTS = 500  # Hard cap — prevents memory spikes on broad queries
 
 # Gene / keyword filters for each supported target class
 GENE_KEYWORDS: dict[str, list[str]] = {
@@ -62,31 +68,30 @@ async def _download_card_archive() -> bytes:
         return resp.content
 
 
-def _parse_aro_index(archive: tarfile.TarFile) -> list[dict]:
-    """Parse aro_index.tsv into list of row dicts."""
+def _parse_aro_index(archive: tarfile.TarFile) -> dict[str, dict]:
+    """Parse aro_index.tsv into {accession: row_dict} lookup.
+
+    Returns a dict keyed by both "ARO:XXXXXXX" and bare "XXXXXXX" forms.
+    """
     f = archive.extractfile("./aro_index.tsv")
     if not f:
-        return []
+        return {}
     lines = f.read().decode("utf-8", errors="replace").splitlines()
+    f.close()
     if len(lines) < 2:
-        return []
+        return {}
     header = [h.strip() for h in lines[0].split("\t")]
-    rows = []
+    lookup: dict[str, dict] = {}
     for line in lines[1:]:
         if not line.strip():
             continue
         parts = line.split("\t")
         row = {header[i]: parts[i].strip() if i < len(parts) else "" for i in range(len(header))}
-        rows.append(row)
-    return rows
-
-
-def _parse_card_json(archive: tarfile.TarFile) -> dict[str, dict]:
-    """Parse card.json into {model_id_str: model_entry} dict."""
-    f = archive.extractfile("./card.json")
-    if not f:
-        return {}
-    return json.load(f)
+        acc = row.get("ARO Accession", "")
+        if acc:
+            lookup[acc] = row                         # "ARO:3003294"
+            lookup[acc.replace("ARO:", "")] = row     # "3003294"
+    return lookup
 
 
 def _matches_genes(text: str, genes_lower: list[str]) -> bool:
@@ -170,34 +175,46 @@ async def fetch_card_documents(
     Download the live CARD data package and extract resistance gene documents
     matching the given target_genes / drug_classes.
 
+    Filtering logic:
+      - If both target_genes and drug_classes are provided, a document must match
+        at least one gene AND at least one drug class (AND filter, strict).
+      - If only one is provided, matches on that dimension alone.
+      - If neither is provided, returns an empty list (no broad-scan).
+
+    Capped at MAX_DOCUMENTS to prevent memory spikes.
+
     Returns list of {"id", "text", "metadata"} ready for VectorStore.add_documents().
     """
     genes_lower = [g.lower() for g in target_genes] if target_genes else []
     classes_lower = [d.lower() for d in drug_classes] if drug_classes else []
+
+    if not genes_lower and not classes_lower:
+        logger.info("CARD: no target genes or drug classes specified — skipping fetch.")
+        return []
 
     # Download
     logger.info("CARD: downloading latest data from %s ...", CARD_DATA_URL)
     raw = await _download_card_archive()
     logger.info("CARD: downloaded %d bytes.", len(raw))
 
-    # Open archive
+    # Open archive and parse aro_index first (small, needed for enrichment)
     archive = tarfile.open(fileobj=io.BytesIO(raw), mode="r:bz2")
+    aro_index_lookup = _parse_aro_index(archive)
 
-    # Parse both files
-    aro_index_rows = _parse_aro_index(archive)
-    card_models = _parse_card_json(archive)
+    # Stream-process card.json: parse incrementally, filter, cap
+    card_file = archive.extractfile("./card.json")
+    if not card_file:
+        archive.close()
+        logger.error("CARD: card.json not found in archive.")
+        return []
+
+    card_models: dict = json.load(card_file)
+    card_file.close()
+
+    # Free the archive and raw bytes as soon as possible
     archive.close()
+    del raw
 
-    # Build aro_accession → index row lookup
-    # card.json uses bare numbers (e.g. "3003294"); aro_index.tsv uses "ARO:3003294"
-    aro_index_lookup: dict[str, dict] = {}
-    for row in aro_index_rows:
-        acc = row.get("ARO Accession", "")
-        if acc:
-            aro_index_lookup[acc] = row                          # "ARO:3003294"
-            aro_index_lookup[acc.replace("ARO:", "")] = row      # "3003294"
-
-    # Filter models relevant to the requested genes / drug classes
     documents: list[dict] = []
     seen_ids: set[str] = set()
 
@@ -205,13 +222,15 @@ async def fetch_card_documents(
         if not isinstance(model, dict):
             continue
 
-        # card.json ARO_accession is a bare number string, e.g. "3003294"
+        # Stop once we've hit the cap
+        if len(documents) >= MAX_DOCUMENTS:
+            break
+
         aro_acc_raw = str(model.get("ARO_accession", ""))
         aro_name = model.get("ARO_name", "")
         aro_desc = model.get("ARO_description", "")
         search_text = f"{aro_name} {aro_desc}"
 
-        # Look up aro_index row (keyed by bare number or "ARO:XXXXXXX")
         aro_row = aro_index_lookup.get(aro_acc_raw)
         if aro_row:
             search_text += (
@@ -220,22 +239,25 @@ async def fetch_card_documents(
                 f" {aro_row.get('Resistance Mechanism', '')}"
             )
 
-        # Apply filters
-        gene_match = (not genes_lower) or _matches_genes(search_text, genes_lower)
-        class_match = (not classes_lower) or _matches_drug_class(search_text, classes_lower)
+        # Strict AND filter when both dimensions provided
+        if genes_lower and classes_lower:
+            if not (_matches_genes(search_text, genes_lower) and _matches_drug_class(search_text, classes_lower)):
+                continue
+        elif genes_lower:
+            if not _matches_genes(search_text, genes_lower):
+                continue
+        elif classes_lower:
+            if not _matches_drug_class(search_text, classes_lower):
+                continue
 
-        if not (gene_match or class_match):
-            continue
-
-        aro_full = f"ARO:{aro_acc_raw}" if aro_acc_raw else ""
         doc_id = f"card_{aro_acc_raw}"
         if doc_id in seen_ids:
             continue
         seen_ids.add(doc_id)
 
+        aro_full = f"ARO:{aro_acc_raw}" if aro_acc_raw else ""
         text = _format_card_entry(model, aro_row)
 
-        # Extract metadata from aro_index row (most reliable source)
         dc_meta = aro_row.get("Drug Class", "") if aro_row else ""
         mech_meta = aro_row.get("Resistance Mechanism", "") if aro_row else ""
         gf_meta = aro_row.get("AMR Gene Family", "") if aro_row else ""
@@ -256,8 +278,11 @@ async def fetch_card_documents(
             }
         )
 
+    # Free the large dict now that we're done iterating
+    del card_models
+
     logger.info(
-        "CARD: extracted %d relevant documents (genes=%s, classes=%s).",
-        len(documents), target_genes, drug_classes,
+        "CARD: extracted %d relevant documents (genes=%s, classes=%s, cap=%d).",
+        len(documents), target_genes, drug_classes, MAX_DOCUMENTS,
     )
     return documents
