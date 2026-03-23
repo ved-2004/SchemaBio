@@ -23,19 +23,31 @@ const AuthContext = createContext<AuthContextValue>({
   refetch: async () => {},
 });
 
+export function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchMe = useCallback(async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        credentials: "include", // send the httponly JWT cookie
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         setUser(await res.json());
       } else {
         setUser(null);
+        localStorage.removeItem("access_token");
       }
     } catch {
       setUser(null);
@@ -49,10 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchMe]);
 
   const logout = useCallback(async () => {
-    await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
+    localStorage.removeItem("access_token");
     setUser(null);
   }, []);
 

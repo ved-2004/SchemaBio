@@ -6,6 +6,7 @@
 import type { ExperimentDesignResponse, ExecutionPlanningResponse } from "@/types/layer2";
 import type { ExperimentDesignInput, ProgramState } from "@/types/ingestion";
 import { API_BASE_URL } from "./config";
+import { authHeaders } from "@/contexts/AuthContext";
 
 // ─── Layer 2 ──────────────────────────────────────────────────────────────────
 
@@ -17,8 +18,7 @@ export async function runExperimentDesign(
 ): Promise<ExperimentDesignResponse> {
   const res = await fetch(`${API_BASE_URL}/api/experiment-design/run`, {
     method:      "POST",
-    headers:     { "Content-Type": "application/json" },
-    credentials: "include",
+    headers:     { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({
       experiment_design_input,
       program_state,
@@ -45,8 +45,7 @@ export async function runExecutionPlanning(
 ): Promise<ExecutionPlanningResponse> {
   const res = await fetch(`${API_BASE_URL}/api/execution-planning/run`, {
     method:      "POST",
-    headers:     { "Content-Type": "application/json" },
-    credentials: "include",
+    headers:     { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({
       execution_planning_input,
       experiment_design_output: experiment_design_output ?? null,

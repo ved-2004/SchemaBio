@@ -1,13 +1,13 @@
 """
 api/routers/auth.py
 
-Google OAuth2 flow + JWT-in-httponly-cookie auth.
+Google OAuth2 flow + JWT auth via Authorization header.
 
 Endpoints:
   GET  /auth/google           — Redirect to Google consent screen
-  GET  /auth/google/callback  — Exchange code → JWT cookie → redirect to frontend
-  GET  /auth/me               — Return current user (reads JWT cookie)
-  POST /auth/logout           — Clear JWT cookie
+  GET  /auth/google/callback  — Exchange code → redirect to frontend with token
+  GET  /auth/me               — Return current user (reads Authorization header)
+  POST /auth/logout           — No-op (frontend clears localStorage)
 
 Dependency:
   get_current_user            — Reusable FastAPI dependency for protected routes
@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 
@@ -69,23 +69,32 @@ def _verify_jwt(token: str) -> str:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
+def _extract_token(request: Request) -> Optional[str]:
+    """Extract JWT from Authorization header (Bearer <token>)."""
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:]
+    return None
+
+
 # ── Dependency ────────────────────────────────────────────────────────────────
 
 
-async def get_optional_user(access_token: Optional[str] = Cookie(None)) -> Optional[User]:
+async def get_optional_user(request: Request) -> Optional[User]:
     """Like get_current_user but returns None instead of raising 401."""
-    if not access_token:
+    token = _extract_token(request)
+    if not token:
         return None
     try:
-        user_id = _verify_jwt(access_token)
+        user_id = _verify_jwt(token)
         return get_user_by_id(user_id)
     except HTTPException:
         return None
 
 
-async def get_current_user(access_token: Optional[str] = Cookie(None)) -> User:
+async def get_current_user(request: Request) -> User:
     """
-    Reusable dependency. Reads JWT from the `access_token` httponly cookie.
+    Reusable dependency. Reads JWT from the Authorization header.
     Raises 401 if missing or invalid.
 
     Usage:
@@ -93,9 +102,10 @@ async def get_current_user(access_token: Optional[str] = Cookie(None)) -> User:
         async def protected(user: User = Depends(get_current_user)):
             ...
     """
-    if not access_token:
+    token = _extract_token(request)
+    if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    user_id = _verify_jwt(access_token)
+    user_id = _verify_jwt(token)
     user = get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -121,8 +131,15 @@ async def google_login():
     }
     auth_url = f"{_GOOGLE_AUTH_URL}?{urllib.parse.urlencode(params)}"
     resp = RedirectResponse(url=auth_url)
-    # Short-lived CSRF state cookie
-    resp.set_cookie("oauth_state", state, max_age=300, httponly=True, samesite="lax")
+    # Short-lived CSRF state cookie (same-origin, backend-only)
+    resp.set_cookie(
+        "oauth_state",
+        state,
+        max_age=300,
+        httponly=True,
+        samesite="lax",
+        secure=BACKEND_URL.startswith("https"),
+    )
     return resp
 
 
@@ -132,7 +149,7 @@ async def google_callback(
     state: str,
     oauth_state: Optional[str] = Cookie(None),
 ):
-    """Exchange Google auth code for user info, set JWT cookie, redirect to frontend."""
+    """Exchange Google auth code for user info, redirect to frontend with token."""
     if not oauth_state or oauth_state != state:
         raise HTTPException(status_code=400, detail="OAuth state mismatch — possible CSRF")
 
@@ -171,18 +188,12 @@ async def google_callback(
     )
     jwt_token = _create_jwt(user.id)
 
-    # Redirect to frontend dashboard and plant the JWT cookie
-    dest = RedirectResponse(url=f"{FRONTEND_URL}/dashboard", status_code=302)
-    dest.delete_cookie("oauth_state")
-    dest.set_cookie(
-        "access_token",
-        jwt_token,
-        max_age=60 * 60 * 24 * JWT_EXPIRE_DAYS,
-        httponly=True,
-        samesite="lax",
-        secure=FRONTEND_URL.startswith("https"),
-        path="/",
+    # Redirect to frontend callback page with token as query param
+    dest = RedirectResponse(
+        url=f"{FRONTEND_URL}/auth/callback?token={jwt_token}",
+        status_code=302,
     )
+    dest.delete_cookie("oauth_state")
     return dest
 
 
@@ -194,7 +205,5 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout():
-    """Clear the JWT cookie."""
-    resp = Response(content='{"status":"logged out"}', media_type="application/json")
-    resp.delete_cookie("access_token", path="/", samesite="lax")
-    return resp
+    """Logout is handled client-side by clearing localStorage."""
+    return {"status": "logged out"}

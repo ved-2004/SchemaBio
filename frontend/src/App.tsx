@@ -15,6 +15,7 @@ import Literature from "./pages/Literature";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import AppLayout from "./components/layout/AppLayout";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/ingestion" element={<Ingestion />} />
